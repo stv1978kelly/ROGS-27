@@ -71,6 +71,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(20000);
+    ROWS_CACHE = {};
     ensureSheets();
     const card = JSON.parse(e.postData.contents);
     const pin = PropertiesService.getScriptProperties().getProperty("CARD_PIN");
@@ -83,11 +84,13 @@ function doPost(e) {
   } catch (ex) {
     return json({ok: false, error: String(ex)});
   } finally {
+    ROWS_CACHE = null;
     lock.releaseLock();
   }
 }
 
 function doGet(e) {
+  ROWS_CACHE = {};
   try {
     ensureSheets();
     const action = (e && e.parameter && e.parameter.action) || "leaderboard";
@@ -96,6 +99,8 @@ function doGet(e) {
     return json({ok: false, error: "Unknown action: " + action});
   } catch (ex) {
     return json({ok: false, error: String(ex)});
+  } finally {
+    ROWS_CACHE = null;
   }
 }
 
@@ -139,9 +144,16 @@ function makeSheet(ss, name, headers, rows) {
   return sh;
 }
 
+// Each tab is read from the sheet once per request (doGet/doPost) and reused:
+// sheet reads are the slow part, and the leaderboard looks things up per card.
+let ROWS_CACHE = null;
+
 function rows(name) {
+  if (ROWS_CACHE && ROWS_CACHE[name]) return ROWS_CACHE[name];
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
-  return sh.getDataRange().getValues().slice(1);
+  const data = sh.getDataRange().getValues().slice(1);
+  if (ROWS_CACHE) ROWS_CACHE[name] = data;
+  return data;
 }
 
 // ── Cards ──
