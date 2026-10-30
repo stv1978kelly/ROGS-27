@@ -22,6 +22,16 @@ day's leaderboard back to the page.
    four tabs: Players, Settings, Schedule and Cards.
 6. Paste the URL into `WEBAPP_URL` in `index.html`.
 
+## Card PIN
+
+The score card is behind a 4-digit PIN (tap the ROGS 2027 title). The sheet's
+script checks it on every card, so it must be set in the script, not just the
+page: in Apps Script open **Project Settings** (cog) > **Script Properties** >
+**Add script property**, name it `CARD_PIN`, and give it the PIN as its value.
+Never put the PIN in this repo; it's public. The page only holds a salted
+SHA-256 of it (`PIN_HASH` in `index.html`, salt `rogs27:`), so changing the PIN
+means updating both the Script Property and that hash.
+
 ## Running the trip
 
 | Tab | What to do |
