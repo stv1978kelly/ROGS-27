@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Golf Score Card - ROGS 2026 Malaga</title>
+<title>Golf Score Card - ROGS 2027 Malaga</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -398,6 +398,205 @@
     .scorecard .total-col { width: 30px; min-width: 30px; }
     .scorecard input[type="number"] { font-size: 0.95em; }
   }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    background: #0d1830;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 1 0 auto;
+    padding: 12px 14px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #a0b0d4;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tab-btn:hover { color: #fff; }
+  .tab-btn.active { color: #d4a017; border-bottom-color: #d4a017; background: #1a2a5c; }
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+
+  /* ── DAY PAGES ── */
+  .day-course {
+    text-align: center;
+    padding: 8px;
+    margin-bottom: 12px;
+    background: #1a2a5c;
+    border-radius: 8px;
+  }
+  .day-course h2 {
+    font-family: 'Playfair Display', serif;
+    color: #fff;
+    font-size: 1.1em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .day-course .day-course-name {
+    color: #d4a017;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .leaderboard {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+  .leaderboard th {
+    background: #333;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 6px;
+  }
+  .leaderboard td {
+    border-bottom: 1px solid #e0e4ee;
+    padding: 9px 6px;
+    text-align: center;
+    color: #333;
+  }
+  .leaderboard tr:nth-child(even) td { background: #f5f7fc; }
+  .leaderboard .lb-player { text-align: left; font-weight: 600; color: #1a2a5c; }
+  .leaderboard th.lb-player { color: #fff; }
+  .leaderboard .lb-pts { font-weight: 700; color: #1a2a5c; background: #fdf6e0 !important; }
+  .leaderboard th.lb-pts { background: #333 !important; color: #d4a017; }
+  .day-note {
+    font-size: 0.75em;
+    color: #888;
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  /* ── CHAMPIONS (top left) ── */
+  .champ-btn {
+    position: absolute; top: 10px; left: 12px;
+    width: 34px; height: 34px; padding: 0;
+    border-radius: 50%;
+    border: 2px solid #d4a017;
+    background: url('img/champs.jpg') 52% 35.5% / 230% no-repeat, #1a2a5c;   /* faces + shield */
+    cursor: pointer;
+  }
+  .champ-btn .trophy {
+    position: absolute; bottom: -5px; right: -5px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #d4a017; color: #1a2a5c;
+    font-size: 8px; line-height: 14px; text-align: center;
+  }
+  .champ-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(13,24,48,0.92);
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .champ-overlay.open { display: flex; }
+  .champ-card {
+    position: relative;
+    max-width: 420px; width: 100%; max-height: 100%;
+    display: flex; flex-direction: column;
+    background: #1a2a5c; border: 2px solid #d4a017; border-radius: 14px;
+    overflow: hidden;
+  }
+  .champ-card h2 {
+    font-family: 'Playfair Display', serif; color: #d4a017;
+    text-align: center; letter-spacing: 2px; text-transform: uppercase;
+    font-size: 1.1em; padding: 12px 40px 10px;
+  }
+  .champ-card img { display: block; width: 100%; min-height: 0; flex: 1 1 auto; object-fit: cover; object-position: center 45%; }
+  .champ-names { display: flex; gap: 8px; padding: 12px 14px 14px; }
+  .champ-name { flex: 1; text-align: center; color: #fff; }
+  .champ-name .role { font-size: 0.65em; color: #a0b0d4; text-transform: uppercase; letter-spacing: 1.5px; }
+  .champ-name .who { font-family: 'Playfair Display', serif; font-size: 1.05em; font-weight: 700; margin-top: 2px; }
+  .champ-name.current .who { color: #d4a017; }
+  .champ-name .side { font-size: 0.65em; color: #a0b0d4; margin-top: 1px; }
+  .champ-close {
+    position: absolute; top: 6px; right: 8px;
+    border: none; background: none; color: #fff;
+    font-size: 1.6em; line-height: 1; cursor: pointer; padding: 4px;
+  }
+
+  /* ── HEADER ICONS / NOTIFICATIONS ── */
+  .header-icons { position: absolute; top: 10px; right: 12px; display: flex; gap: 8px; }
+  .icon-btn {
+    position: relative;
+    width: 34px; height: 34px; padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(212,160,23,0.5);
+    background: rgba(255,255,255,0.08);
+    color: #d4a017;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.18); }
+  .icon-btn svg { width: 18px; height: 18px; }
+  .badge {
+    display: none;
+    position: absolute; top: -5px; right: -5px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: 9px;
+    background: #e74c3c; color: #fff;
+    font-size: 10px; font-weight: 700; line-height: 17px; text-align: center;
+  }
+  .badge.show { display: block; }
+  .notif-panel {
+    display: none;
+    position: absolute; top: 52px; right: 12px; z-index: 50;
+    width: min(320px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    text-align: left;
+  }
+  .notif-panel.open { display: block; }
+  .notif-panel h3 {
+    font-family: 'Playfair Display', serif; color: #1a2a5c; font-size: 1em;
+    padding: 12px 14px 8px; border-bottom: 2px solid #d4a017;
+  }
+  .notif-item { padding: 10px 14px; border-bottom: 1px solid #eee; }
+  .notif-item.new { background: #fdf6e0; }
+  .notif-time { font-size: 0.7em; color: #888; margin-bottom: 2px; }
+  .notif-msg { font-size: 0.85em; color: #1a2a5c; white-space: pre-wrap; }
+  .notif-empty { padding: 14px; font-size: 0.85em; color: #888; }
+  .notif-banner {
+    display: none;
+    position: relative;
+    padding: 10px 40px 10px 14px;
+    background: #d4a017; color: #1a2a5c;
+    font-size: 0.85em; font-weight: 600;
+  }
+  .notif-banner.show { display: block; }
+  .notif-banner .close {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    border: none; background: none; color: #1a2a5c;
+    font-size: 1.4em; line-height: 1; cursor: pointer; padding: 4px;
+  }
+
+  @media (max-width: 700px) {
+    .tab-btn { flex: 1 1 auto; padding: 10px 4px; font-size: 0.65em; letter-spacing: 0.3px; }
+    /* keep the title clear of the home/bell icons */
+    .header { padding-left: 84px; padding-right: 84px; }
+    .header h1 { font-size: 1.3em; letter-spacing: 0.5px; white-space: nowrap; }
+    .header .golf-icon { margin: 0 1px; }
+    .header .subtitle { letter-spacing: 1px; white-space: nowrap; }
+    .header-icons { top: 8px; right: 8px; gap: 6px; }
+    .icon-btn { width: 32px; height: 32px; }
+    .notif-panel { top: 46px; right: 8px; }
+    .champ-btn { top: 8px; left: 8px; width: 32px; height: 32px; }
+    .leaderboard { font-size: 0.8em; }
+    .leaderboard.overall td, .leaderboard.overall th { padding-left: 2px; padding-right: 2px; }
+  }
 </style>
 </head>
 <body>
@@ -409,11 +608,37 @@
 
 <div class="card-container">
   <div class="header">
-    <h1><span class="golf-icon">&#9971;</span> ROGS 2026 <span class="golf-icon">&#9971;</span></h1>
+    <h1><span class="golf-icon">&#9971;</span> ROGS 2027 <span class="golf-icon">&#9971;</span></h1>
     <div class="subtitle">Malaga Golf Score Card</div>
+    <button class="champ-btn" id="champBtn" aria-label="ROGS champions" title="Champions"><span class="trophy">&#127942;</span></button>
+    <div class="header-icons">
+      <button class="icon-btn" id="homeBtn" aria-label="Home - score card" title="Score card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </button>
+      <button class="icon-btn" id="bellBtn" aria-label="Notifications" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge" id="notifBadge"></span>
+      </button>
+    </div>
+    <div class="notif-panel" id="notifPanel"></div>
   </div>
 
-  <div class="card-body">
+  <div class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-tab="page-card">Score Card</button>
+    <button class="tab-btn" data-tab="page-day1">Day 1</button>
+    <button class="tab-btn" data-tab="page-day2">Day 2</button>
+    <button class="tab-btn" data-tab="page-day3">Day 3</button>
+    <button class="tab-btn" data-tab="page-day4">Day 4</button>
+    <button class="tab-btn" data-tab="page-day5">Day 5</button>
+    <button class="tab-btn" data-tab="page-overall">Overall</button>
+  </div>
+
+  <div class="notif-banner" id="notifBanner">
+    <span id="notifBannerText"></span>
+    <button class="close" id="notifBannerClose" aria-label="Close">&times;</button>
+  </div>
+
+  <div class="card-body tab-page active" id="page-card">
     <div class="duplicate-warning" id="duplicateWarning">
       <span class="close-warning" onclick="this.parentElement.style.display='none'">&times;</span>
       <strong>Heads up!</strong> A score card for <span id="dupPlayer"></span> on <span id="dupCourse"></span> has already been submitted.
@@ -447,11 +672,11 @@
         <label>Course Played</label>
         <select id="coursePlayed">
           <option value="">-- Select Course --</option>
-          <option>Cabopino</option>
-          <option>America</option>
-          <option>Calanova</option>
           <option>Torrequebrada</option>
-          <option>Chaparral</option>
+          <option>Calanova</option>
+          <option>Cabopino</option>
+          <option>La Cala Asia</option>
+          <option>Santana</option>
         </select>
       </div>
     </div>
@@ -526,151 +751,166 @@
       <button class="btn btn-danger" onclick="resetCard()">Clear</button>
     </div>
   </div>
+
+  <!-- DAY 1-5 (built by buildDayPages) -->
+  <div id="dayPages"></div>
+</div>
+
+<div class="champ-overlay" id="champOverlay">
+  <div class="champ-card">
+    <button class="champ-close" id="champClose" aria-label="Close">&times;</button>
+    <h2>ROGS Champions</h2>
+    <img src="img/champs.jpg" alt="Paddy Swan receiving the ROGS shield from Rick Kennedy" loading="lazy">
+    <div class="champ-names">
+      <div class="champ-name current"><div class="role">Current champion</div><div class="who">Paddy Swan</div><div class="side">left</div></div>
+      <div class="champ-name"><div class="role">Past champion</div><div class="who">Rick Kennedy</div><div class="side">right</div></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
-<iframe name="submitFrame" id="submitFrame" style="display:none;"></iframe>
 
 <script>
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  CONFIGURATION                                              ║
 // ╚══════════════════════════════════════════════════════════════╝
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwOU0Rq-Wb7S8-45dl-9yrpsJtGY64cHjXjPL1zxIryd11zsW24-LwQwXkFqGR3H6t35A/exec";
+// The NEW backend (backend/Code.gs, see backend/SETUP.md). The old script was
+// https://script.google.com/macros/s/AKfycbwOU0Rq-Wb7S8-45dl-9yrpsJtGY64cHjXjPL1zxIryd11zsW24-LwQwXkFqGR3H6t35A/exec
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzkQ4du54jiu-K2w00dHCkdgZe2rW4M3kPCB8q3mUoi4y3iZLXlpu7-A19jUbhwllBPOA/exec";
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  COURSE DATA - Add more courses here as needed              ║
 // ╚══════════════════════════════════════════════════════════════╝
 const COURSES = {
-  "Cabopino": {
-    name: "Cabopino Golf",
+  "Torrequebrada": {
+    name: "Golf Torrequebrada",   // yellow tees, metres - club scorecard PDF, 2024
     holes: [
-      // Front 9:  [hole, yellow, white, blue, par, hcp]
-      [1,  309, 301, 264, 4, 11],
-      [2,  275, 263, 244, 4, 12],
-      [3,  288, 287, 230, 4, 13],
-      [4,  243, 231, 210, 4,  9],
-      [5,  378, 352, 312, 4,  1],
-      [6,  264, 259, 252, 4, 10],
-      [7,  149, 134, 125, 3, 15],
-      [8,  277, 267, 221, 4,  6],
-      [9,  327, 311, 275, 4,  3],
+      // Front 9:  [hole, yellow(m), par, si]
+      [ 1, 440, 5,  8],
+      [ 2, 339, 4,  6],
+      [ 3,  87, 3, 18],
+      [ 4, 323, 4, 10],
+      [ 5, 346, 4, 14],
+      [ 6, 489, 5,  4],
+      [ 7, 306, 4, 12],
+      [ 8, 363, 4,  2],
+      [ 9, 142, 3, 16],
       // Back 9:
-      [10, 327, 314, 298, 4,  7],
-      [11, 336, 318, 279, 4,  2],
-      [12, 422, 392, 354, 5,  5],
-      [13, 134, 121, 106, 3, 18],
-      [14, 456, 442, 403, 5,  4],
-      [15, 130, 115, 104, 3, 17],
-      [16, 305, 290, 274, 4, 14],
-      [17, 268, 258, 250, 4, 16],
-      [18, 305, 291, 266, 4,  8]
-    ]
-  },
-  "America": {
-    name: "La Cala America",
-    holes: [
-      // Front 9:  [hole, yellow(m), white(m), blue(m), par, hcp]
-      [1,  438, 440, 440, 5, 10],
-      [2,  308, 325, 325, 4, 14],
-      [3,  275, 298, 298, 4, 16],
-      [4,  153, 180, 180, 3,  6],
-      [5,  278, 324, 324, 4, 12],
-      [6,  437, 469, 469, 5,  2],
-      [7,  396, 417, 417, 4,  4],
-      [8,   97, 118, 118, 3, 18],
-      [9,  458, 473, 473, 5,  8],
-      // Back 9:
-      [10, 337, 345, 345, 4,  7],
-      [11, 209, 217, 217, 3, 13],
-      [12, 346, 366, 366, 4,  5],
-      [13, 341, 391, 391, 4,  3],
-      [14, 126, 160, 160, 3, 15],
-      [15, 479, 500, 500, 5,  1],
-      [16, 105, 123, 123, 3, 17],
-      [17, 326, 355, 355, 4,  9],
-      [18, 491, 508, 508, 5, 11]
+      [10, 375, 4,  3],
+      [11, 160, 3, 15],
+      [12, 451, 5,  5],
+      [13, 144, 3, 17],
+      [14, 457, 5,  7],
+      [15, 319, 4, 11],
+      [16, 359, 4,  1],
+      [17, 351, 4,  9],
+      [18, 315, 4, 13]
     ]
   },
   "Calanova": {
-    name: "Calanova Golf",
+    name: "Calanova Golf Club",   // yellow tees, metres - club scorecard PDF
     holes: [
-      // Front 9:  [hole, yellow(m), white(m), blue(m), par, si]
-      [1,  487, 487, 487, 5,  9],
-      [2,  350, 350, 350, 4,  5],
-      [3,  327, 327, 327, 4, 13],
-      [4,  311, 311, 311, 4, 11],
-      [5,  368, 424, 424, 4,  1],
-      [6,  163, 163, 163, 3,  7],
-      [7,  339, 339, 339, 4, 15],
-      [8,  146, 146, 146, 3, 17],
-      [9,  434, 434, 434, 5,  3],
+      // Front 9:  [hole, yellow(m), par, si]
+      [ 1, 487, 5,  9],
+      [ 2, 350, 4,  5],
+      [ 3, 327, 4, 13],
+      [ 4, 311, 4, 11],
+      [ 5, 368, 4,  1],
+      [ 6, 163, 3,  7],
+      [ 7, 339, 4, 15],
+      [ 8, 146, 3, 17],
+      [ 9, 434, 5,  3],
       // Back 9:
-      [10, 455, 455, 455, 5,  6],
-      [11, 349, 386, 386, 4,  4],
-      [12, 251, 251, 251, 4, 18],
-      [13, 150, 150, 150, 3, 12],
-      [14, 528, 528, 528, 5,  2],
-      [15, 291, 291, 291, 4,  8],
-      [16, 374, 374, 374, 4, 10],
-      [17, 146, 146, 146, 3, 16],
-      [18, 304, 304, 304, 4, 14]
+      [10, 455, 5,  6],
+      [11, 349, 4,  4],
+      [12, 251, 4, 18],
+      [13, 150, 3, 12],
+      [14, 528, 5,  2],
+      [15, 291, 4,  8],
+      [16, 374, 4, 10],
+      [17, 146, 3, 16],
+      [18, 304, 4, 14]
     ]
   },
-  "Torrequebrada": {
-    name: "Torrequebrada Golf",
+  "Cabopino": {
+    name: "Cabopino Golf Marbella",   // yellow tees, metres - club scorecard PDF
     holes: [
-      // Front 9:  [hole, yellow(m), white(m), blue(m), par, si]
-      [1,  399, 440, 409, 5,  8],
-      [2,  248, 342, 281, 4,  6],
-      [3,   64,  89,  72, 3, 18],
-      [4,  263, 328, 267, 4, 10],
-      [5,  313, 348, 315, 4, 14],
-      [6,  435, 492, 438, 5,  4],
-      [7,  278, 308, 287, 4, 12],
-      [8,  312, 367, 321, 4,  2],
-      [9,  107, 143, 112, 3, 16],
+      // Front 9:  [hole, yellow(m), par, si]
+      [ 1, 309, 4, 11],
+      [ 2, 275, 4, 12],
+      [ 3, 288, 4, 13],
+      [ 4, 243, 4,  9],
+      [ 5, 378, 4,  1],
+      [ 6, 264, 4, 10],
+      [ 7, 149, 3, 15],
+      [ 8, 277, 4,  6],
+      [ 9, 327, 4,  3],
       // Back 9:
-      [10, 325, 382, 329, 4,  3],
-      [11, 118, 161, 121, 3, 15],
-      [12, 385, 458, 395, 5,  5],
-      [13, 122, 147, 126, 3, 17],
-      [14, 399, 461, 407, 5,  7],
-      [15, 282, 320, 285, 4, 11],
-      [16, 286, 387, 293, 4,  1],
-      [17, 296, 353, 302, 4,  9],
-      [18, 265, 316, 294, 4, 13]
+      [10, 327, 4,  7],
+      [11, 336, 4,  2],
+      [12, 422, 5,  5],
+      [13, 134, 3, 18],
+      [14, 456, 5,  4],
+      [15, 130, 3, 17],
+      [16, 305, 4, 14],
+      [17, 268, 4, 16],
+      [18, 305, 4,  8]
     ]
   },
-  "Chaparral": {
-    name: "Chaparral Golf",
+  "La Cala Asia": {
+    name: "La Cala Resort - Asia",   // yellow tees, metres - La Cala official scorecard, 2022 (web archive)
     holes: [
-      // Front 9:  [hole, yellow(m), white(m), blue(m), par, si]
-      [1,  321, 321, 321, 4,  7],
-      [2,  161, 161, 161, 3,  9],
-      [3,  467, 467, 467, 5,  1],
-      [4,  187, 187, 187, 3,  3],
-      [5,  316, 316, 316, 4, 15],
-      [6,  449, 449, 449, 5, 13],
-      [7,  454, 454, 454, 5, 11],
-      [8,  309, 309, 309, 4,  5],
-      [9,  317, 317, 317, 4, 17],
+      // Front 9:  [hole, yellow(m), par, si]
+      [ 1, 286, 4, 12],
+      [ 2, 252, 4, 16],
+      [ 3, 119, 3, 18],
+      [ 4, 279, 4,  2],
+      [ 5, 461, 5, 10],
+      [ 6, 325, 4,  4],
+      [ 7, 125, 3, 14],
+      [ 8, 338, 4,  8],
+      [ 9, 424, 5,  6],
       // Back 9:
-      [10, 150, 150, 150, 3, 14],
-      [11, 438, 438, 438, 5,  6],
-      [12, 290, 290, 290, 4,  8],
-      [13, 438, 438, 438, 5, 12],
-      [14, 156, 156, 156, 3,  4],
-      [15, 277, 277, 277, 4, 16],
-      [16,  99,  99,  99, 3, 18],
-      [17, 446, 446, 446, 5,  2],
-      [18, 163, 163, 163, 3, 10]
+      [10, 460, 5,  1],
+      [11, 164, 3, 13],
+      [12, 314, 4,  3],
+      [13, 368, 4,  5],
+      [14, 281, 4, 17],
+      [15, 333, 4, 11],
+      [16, 435, 5,  7],
+      [17, 101, 3, 15],
+      [18, 336, 4,  9]
+    ]
+  },
+  "Santana": {
+    name: "Santana Golf",   // yellow tees, metres - club scorecard page
+    holes: [
+      // Front 9:  [hole, yellow(m), par, si]
+      [ 1, 285, 4, 13],
+      [ 2, 145, 3,  9],
+      [ 3, 347, 4,  7],
+      [ 4, 524, 5,  3],
+      [ 5, 296, 4, 11],
+      [ 6, 321, 4, 17],
+      [ 7, 165, 3,  5],
+      [ 8, 541, 5,  1],
+      [ 9, 334, 4, 15],
+      // Back 9:
+      [10, 425, 5,  4],
+      [11, 265, 4,  8],
+      [12, 153, 3, 10],
+      [13, 314, 4, 14],
+      [14, 265, 4, 18],
+      [15, 489, 5,  6],
+      [16, 122, 3, 16],
+      [17, 307, 4, 12],
+      [18, 356, 4,  2]
     ]
   }
 };
 
 // ── State ──
 let existingSubmissions = [];
-let submitPending = false;
 let currentCourse = null;
 
 // ── Build scorecard table for a 9-hole half ──
@@ -681,9 +921,7 @@ function buildHalf(bodyId, holes, startIdx) {
 
   // Calculate totals
   const totYellow = nine.reduce((s, h) => s + h[1], 0);
-  const totWhite  = nine.reduce((s, h) => s + h[2], 0);
-  const totBlue   = nine.reduce((s, h) => s + h[3], 0);
-  const totPar    = nine.reduce((s, h) => s + h[4], 0);
+  const totPar    = nine.reduce((s, h) => s + h[2], 0);
 
   const outIn = isBack ? "IN" : "OUT";
 
@@ -708,9 +946,9 @@ function buildHalf(bodyId, holes, startIdx) {
   html += '<td class="label-col">PAR</td>';
   nine.forEach(h => {
     let cls = "";
-    if (h[4] === 3) cls = ' class="par3"';
-    if (h[4] === 5) cls = ' class="par5"';
-    html += '<td' + cls + '>' + h[4] + '</td>';
+    if (h[2] === 3) cls = ' class="par3"';
+    if (h[2] === 5) cls = ' class="par5"';
+    html += '<td' + cls + '>' + h[2] + '</td>';
   });
   html += '<td class="total-col">' + totPar + '</td>';
   html += '</tr>';
@@ -718,7 +956,7 @@ function buildHalf(bodyId, holes, startIdx) {
   // Row: S.I.
   html += '<tr class="row-hcp">';
   html += '<td class="label-col">S.I.</td>';
-  nine.forEach(h => { html += '<td>' + h[5] + '</td>'; });
+  nine.forEach(h => { html += '<td>' + h[3] + '</td>'; });
   html += '<td class="total-col"></td>';
   html += '</tr>';
 
@@ -728,7 +966,7 @@ function buildHalf(bodyId, holes, startIdx) {
   nine.forEach((h, i) => {
     const holeNum = h[0];
     const tabIdx = holeNum;
-    html += '<td><input type="number" min="1" max="12" id="h' + holeNum + '" tabindex="' + tabIdx + '" data-par="' + h[4] + '"></td>';
+    html += '<td><input type="number" min="1" max="12" id="h' + holeNum + '" tabindex="' + tabIdx + '" data-par="' + h[2] + '"></td>';
   });
   const totalId = isBack ? "backTotal" : "frontTotal";
   html += '<td class="total-col" id="' + totalId + '">-</td>';
@@ -767,7 +1005,7 @@ function renderCourse(courseName) {
     buildHalf('front9body', course.holes, 0);
     buildHalf('back9body', course.holes, 9);
 
-    const totalPar = course.holes.reduce((s, h) => s + h[4], 0);
+    const totalPar = course.holes.reduce((s, h) => s + h[2], 0);
     document.getElementById('courseTitle').textContent = course.name;
     document.getElementById('coursePar').textContent = 'Par ' + totalPar + ' | Yellow Tees';
     banner.classList.add('visible');
@@ -908,21 +1146,11 @@ function checkDuplicate() {
   }
 }
 
-// ── Iframe load listener ──
-document.getElementById('submitFrame').addEventListener('load', function() {
-  if (!submitPending) return;
-  submitPending = false;
-  setSubmitting(false);
-  showToast('Score card submitted successfully!', 'success');
-  setTimeout(resetCardSilent, 1500);
-  const bar = document.getElementById('totalsBar');
-  bar.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
-  setTimeout(() => { bar.style.background = ''; }, 2500);
-});
-
 // ── Submit ──
-function submitCard() {
-  if (WEBAPP_URL.includes("PASTE_YOUR")) { showToast('Setup required.', 'error'); return; }
+// Sent as text/plain so the browser posts straight to Apps Script without a
+// CORS preflight, and the card is only cleared once the sheet says it saved.
+async function submitCard() {
+  if (WEBAPP_URL.includes("PASTE_")) { showToast('Setup required.', 'error'); return; }
   const player = document.getElementById('playerName').value;
   const course = document.getElementById('coursePlayed').value;
   const submitter = document.getElementById('submittedBy').value;
@@ -937,47 +1165,32 @@ function submitCard() {
     }
   }
 
+  const card = { player: player, course: course, submittedBy: submitter, scores: [] };
+  for (let i = 1; i <= 18; i++) card.scores.push(parseInt(document.getElementById('h' + i).value));
+
   setSubmitting(true);
-  submitPending = true;
-
-  const oldForm = document.getElementById('hiddenSubmitForm');
-  if (oldForm) oldForm.remove();
-
-  const form = document.createElement('form');
-  form.id = 'hiddenSubmitForm';
-  form.method = 'POST';
-  form.action = WEBAPP_URL;
-  form.target = 'submitFrame';
-  form.style.display = 'none';
-
-  function addField(n, v) {
-    const inp = document.createElement('input');
-    inp.type = 'hidden'; inp.name = n; inp.value = v;
-    form.appendChild(inp);
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 20000);
+  let reply;
+  try {
+    const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify(card), signal: abort.signal });
+    reply = await res.json();
+  } catch (e) {
+    reply = { ok: false, error: 'No connection. Your card is still here - try again when you have signal.' };
+  } finally {
+    clearTimeout(timer);
+    setSubmitting(false);
   }
 
-  addField('player', player);
-  addField('course', course);
-  addField('submittedBy', submitter);
-  for (let i = 1; i <= 18; i++) {
-    addField('hole' + i, document.getElementById('h' + i).value);
-  }
+  if (!reply.ok) { showToast('Not saved: ' + reply.error, 'error'); return; }
 
-  document.body.appendChild(form);
-  form.submit();
   existingSubmissions.push({ player: player, course: course });
-
-  setTimeout(() => {
-    if (submitPending) {
-      submitPending = false;
-      setSubmitting(false);
-      showToast('Score card sent! Check your Google Sheet.', 'success');
-      setTimeout(resetCardSilent, 1500);
-      const bar = document.getElementById('totalsBar');
-      bar.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
-      setTimeout(() => { bar.style.background = ''; }, 2500);
-    }
-  }, 8000);
+  showToast('Score card saved!', 'success');
+  setTimeout(resetCardSilent, 1500);
+  const bar = document.getElementById('totalsBar');
+  bar.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+  setTimeout(() => { bar.style.background = ''; }, 2500);
+  loadLeaderboard();
 }
 
 function resetCardSilent() {
@@ -998,7 +1211,255 @@ function resetCard() {
   showToast('Score card cleared.', 'info');
 }
 
+// ── Day pages: Stableford leaderboard per day, filled from the sheet ──
+function buildDayPages() {
+  let html = '';
+  for (let d = 1; d <= 5; d++) {
+    html += '<div class="card-body tab-page" id="page-day' + d + '">';
+    html += '<div class="day-course"><h2>Day ' + d + '</h2>';
+    html += '<div class="day-course-name" id="dayCourse' + d + '">Course: TBC</div></div>';
+    html += '<div class="section-label"><span>Stableford Leaderboard</span></div>';
+    html += '<table class="leaderboard"><thead><tr>';
+    html += '<th>Pos</th><th class="lb-player">Player</th><th>Front 9</th><th>Back 9</th><th class="lb-pts">Points</th>';
+    html += '</tr></thead><tbody id="dayBody' + d + '"></tbody></table>';
+    html += '<p class="day-note" id="dayNote' + d + '"></p>';
+    html += '</div>';
+  }
+
+  html += '<div class="card-body tab-page" id="page-overall">';
+  html += '<div class="day-course"><h2>Overall</h2>';
+  html += '<div class="day-course-name">Daily finishing positions added up - lowest total wins</div></div>';
+  html += '<div class="section-label"><span>Overall Leaderboard</span></div>';
+  html += '<table class="leaderboard overall"><thead><tr><th>Pos</th><th class="lb-player">Player</th>';
+  for (let d = 1; d <= 5; d++) html += '<th>D' + d + '</th>';
+  html += '<th class="lb-pts">Total</th></tr></thead><tbody id="overallBody"></tbody></table>';
+  html += '<p class="day-note" id="overallNote"></p>';
+  html += '</div>';
+
+  document.getElementById('dayPages').innerHTML = html;
+  for (let d = 1; d <= 5; d++) renderDay(d, null);
+  renderOverall([]);
+}
+
+// ── Overall: each played day's finishing position is your points for that day.
+// No card on a played day = last place (field size). Lowest total wins; level
+// totals split on most Stableford points across the days, then share the spot.
+function renderOverall(days) {
+  const players = Array.from(document.getElementById('playerName').options)
+    .map(o => o.value).filter(Boolean);
+  const played = days.map(d => !!(d && d.course && d.rows && d.rows.some(r => r.total !== null)));
+  const field = players.length;
+
+  const rows = players.map(p => {
+    const dayPos = days.slice(0, 5).map((d, i) => {
+      if (!played[i]) return null;
+      const r = d.rows.find(r => r.player === p);
+      return r && r.pos !== null ? r.pos : field;
+    });
+    const stableford = days.slice(0, 5).reduce((s, d, i) => {
+      const r = played[i] ? d.rows.find(r => r.player === p) : null;
+      return s + (r && r.total !== null ? r.total : 0);
+    }, 0);
+    const counted = dayPos.filter(v => v !== null);
+    return { player: p, dayPos: dayPos, total: counted.length ? counted.reduce((a, b) => a + b, 0) : null, stableford: stableford };
+  });
+
+  rows.sort((a, b) => {
+    if (a.total === null || b.total === null) return (a.total === null) - (b.total === null);
+    return (a.total - b.total) || (b.stableford - a.stableford);
+  });
+  let pos = 0;
+  rows.forEach((r, i) => {
+    if (r.total === null) { r.pos = null; return; }
+    const prev = rows[i - 1];
+    if (!prev || prev.total !== r.total || prev.stableford !== r.stableford) pos = i + 1;
+    r.pos = pos;
+  });
+
+  const dash = v => (v === null || v === undefined ? '-' : v);
+  const tbody = document.getElementById('overallBody');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const cells = [dash(r.pos), r.player];
+    for (let i = 0; i < 5; i++) cells.push(dash(r.dayPos[i]));
+    cells.push(dash(r.total));
+    cells.forEach((v, i) => {
+      const td = document.createElement('td');
+      if (i === 1) td.className = 'lb-player';
+      if (i === cells.length - 1) td.className = 'lb-pts';
+      td.textContent = v;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  const n = played.filter(Boolean).length;
+  document.getElementById('overallNote').textContent = n
+    ? n + ' day' + (n > 1 ? 's' : '') + ' counted. No card on a played day = ' + field + '. Level totals split on total Stableford points.'
+    : 'No days played yet.';
+}
+
+function renderDay(d, day) {
+  const course = day && day.course ? day.course : '';
+  const courseName = COURSES[course] ? COURSES[course].name : course;
+  document.getElementById('dayCourse' + d).textContent = 'Course: ' + (courseName || 'TBC');
+
+  // No course scheduled (or sheet not reached yet): list players with blanks.
+  let rows = day && day.rows && day.rows.length ? day.rows : null;
+  if (!rows) {
+    rows = Array.from(document.getElementById('playerName').options)
+      .map(o => o.value).filter(Boolean)
+      .map(p => ({ pos: null, player: p, front: null, back: null, total: null }));
+  }
+  const dash = v => (v === null || v === undefined ? '-' : v);
+  const tbody = document.getElementById('dayBody' + d);
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    [dash(r.pos), r.player, dash(r.front), dash(r.back), dash(r.total)].forEach((v, i) => {
+      const td = document.createElement('td');
+      if (i === 1) td.className = 'lb-player';
+      if (i === 4) td.className = 'lb-pts';
+      td.textContent = v;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  let note;
+  if (!course) note = 'Course TBC - no scores yet.';
+  else if (!rows.some(r => r.total !== null)) note = 'No cards in yet for this day.';
+  else note = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '. Ties split on back 9.';
+  document.getElementById('dayNote' + d).textContent = note;
+}
+
+async function loadLeaderboard() {
+  if (WEBAPP_URL.includes("PASTE_")) return;
+  try {
+    const res = await fetch(WEBAPP_URL + '?action=leaderboard');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    data.days.slice(0, 5).forEach((day, i) => renderDay(i + 1, day));
+    renderOverall(data.days);
+    renderNotifications(data.notifications || []);
+  } catch (e) {
+    for (let d = 1; d <= 5; d++) {
+      document.getElementById('dayNote' + d).textContent = 'Could not reach the scores sheet - showing nothing new.';
+    }
+    document.getElementById('overallNote').textContent = 'Could not reach the scores sheet - showing nothing new.';
+  }
+}
+
+// ── Notifications (posted in the sheet's Notifications tab) ──
+// Per-phone memory of what's been seen / closed. Storage can be unavailable
+// (private mode), so every access is guarded and the page works without it.
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const DAY_MS = 24 * 60 * 60 * 1000;
+let notifs = [];
+
+function renderNotifications(list) {
+  notifs = list;
+  const lastSeen = Number(store.get('rogsNotifSeen') || 0);
+  const isNew = n => n.posted && Date.parse(n.posted) > lastSeen;
+
+  const unread = notifs.filter(isNew).length;
+  const badge = document.getElementById('notifBadge');
+  badge.textContent = unread > 9 ? '9+' : unread;
+  badge.classList.toggle('show', unread > 0);
+
+  const panel = document.getElementById('notifPanel');
+  panel.innerHTML = '<h3>Notifications</h3>';
+  if (!notifs.length) {
+    const p = document.createElement('div');
+    p.className = 'notif-empty';
+    p.textContent = 'No notifications yet.';
+    panel.appendChild(p);
+  }
+  notifs.forEach(n => {
+    const item = document.createElement('div');
+    item.className = 'notif-item' + (isNew(n) ? ' new' : '');
+    const time = document.createElement('div');
+    time.className = 'notif-time';
+    time.textContent = n.posted ? new Date(n.posted).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const msg = document.createElement('div');
+    msg.className = 'notif-msg';
+    msg.textContent = n.message;
+    item.appendChild(time);
+    item.appendChild(msg);
+    panel.appendChild(item);
+  });
+
+  // Banner: newest notification under 24 hours old, unless closed on this phone.
+  const now = Date.now();
+  const fresh = notifs.find(n => n.posted && now - Date.parse(n.posted) < DAY_MS);
+  const banner = document.getElementById('notifBanner');
+  if (fresh && store.get('rogsBannerClosed') !== fresh.posted) {
+    document.getElementById('notifBannerText').textContent = fresh.message;
+    banner.dataset.posted = fresh.posted;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+document.getElementById('bellBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('notifPanel');
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open', opening);
+  if (opening) {
+    const newest = notifs.reduce((m, n) => Math.max(m, n.posted ? Date.parse(n.posted) : 0), 0);
+    store.set('rogsNotifSeen', String(Math.max(newest, Number(store.get('rogsNotifSeen') || 0))));
+    document.getElementById('notifBadge').classList.remove('show');
+    loadLeaderboard();
+  } else {
+    renderNotifications(notifs);
+  }
+});
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('notifPanel');
+  if (panel.classList.contains('open') && !panel.contains(e.target)) {
+    panel.classList.remove('open');
+    renderNotifications(notifs);
+  }
+});
+document.getElementById('notifBannerClose').addEventListener('click', function() {
+  store.set('rogsBannerClosed', document.getElementById('notifBanner').dataset.posted || '');
+  document.getElementById('notifBanner').classList.remove('show');
+});
+
+// ── Champions photo ──
+const champOverlay = document.getElementById('champOverlay');
+document.getElementById('champBtn').addEventListener('click', () => champOverlay.classList.add('open'));
+document.getElementById('champClose').addEventListener('click', () => champOverlay.classList.remove('open'));
+champOverlay.addEventListener('click', e => { if (e.target === champOverlay) champOverlay.classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') champOverlay.classList.remove('open'); });
+
+// ── Tabs ──
+function showTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.toggle('active', p.id === id));
+}
+document.getElementById('tabBar').addEventListener('click', function(e) {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  showTab(btn.dataset.tab);
+  loadLeaderboard();
+});
+document.getElementById('homeBtn').addEventListener('click', function() {
+  showTab('page-card');
+  window.scrollTo(0, 0);
+});
+
 // ── Init ──
+buildDayPages();
+loadLeaderboard();
+setInterval(loadLeaderboard, 5 * 60 * 1000);                  // new scores + notifications
+setInterval(() => renderNotifications(notifs), 60 * 1000);     // banner expires at 24h
 buildDefaultHalf('front9body', 1);
 buildDefaultHalf('back9body', 10);
 bindInputListeners();
