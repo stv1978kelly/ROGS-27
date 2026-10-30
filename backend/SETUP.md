@@ -37,7 +37,7 @@ means updating both the Script Property and that hash.
 | Tab | What to do |
 |---|---|
 | **Schedule** | Pick each day's course from the dropdown. Fill in **Date** only if the same course is played on two days. |
-| **Players** | Put each player's handicap in. Leave it at 0 for gross Stableford. |
+| **Players** | Each player's **certified starting handicap** for the tour. Don't change it during the trip: after every played day the script adjusts it automatically (League 1 = 10 or below: 0.5 per point; League 2 = 11-18: 0.8; League 3 = 19 and up: 1; cut per point over 32, added per point under 28; no card = no change). Course handicaps per course come from each course's rating and slope. |
 | **Settings** | Allowance: `1` (or `100`) for full handicap, `0.95` (or `95`) for 95%. |
 | **Notifications** | Type a message in the **Message** column; **Posted** fills in the time by itself. It shows on everyone's bell, and as a banner for 24 hours. Delete the row to remove it. |
 | **Cards** | Filled automatically. If a player resubmits a card for the same course, the newest one counts. |

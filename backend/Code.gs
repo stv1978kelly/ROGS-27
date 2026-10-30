@@ -161,7 +161,7 @@ function validateCard(c) {
 function saveCard(c) {
   const now = new Date();
   const scores = c.scores.map(Number);
-  const pts = stablefordPoints(c.course, scores, handicapFor(c.player));
+  const pts = stablefordPoints(c.course, scores, dayHandicapFor(c.course, c.player));
   const gross = scores.reduce((a, b) => a + b, 0);
   const row = [now, Utilities.formatDate(now, TZ, "yyyy-MM-dd"), c.player, c.course, c.submittedBy]
     .concat(scores)
@@ -216,16 +216,45 @@ function stablefordPoints(course, scores, handicap) {
 }
 
 // ── Leaderboard ──
+// ── Tour handicap adjustments (Steve's ROGS rules) ──
+// Players tab = certified starting handicap. After each played day a player's
+// handicap moves by their Stableford points, at the rate for the league they
+// were in going into that day:
+//   League 1 (10 or below)  0.5 per point
+//   League 2 (11-18)        0.8 per point
+//   League 3 (19 and above) 1   per point   (over 28 counts as League 3)
+// cut for each point over 32, added for each point under 28; 28-32 = no change;
+// no card that day = no change. Kept to one decimal; rounded only when turned
+// into a course handicap.
+function leagueRate(hcp) {
+  if (hcp <= 10) return 0.5;
+  if (hcp <= 18) return 0.8;
+  return 1;
+}
+
+function adjustedHandicap(hcp, points) {
+  const rate = leagueRate(hcp);
+  let next = hcp;
+  if (points > 32) next = hcp - rate * (points - 32);
+  else if (points < 28) next = hcp + rate * (28 - points);
+  return Math.round(next * 10) / 10;
+}
+
+// Days in schedule order, each with the handicap every player played off that
+// day (start handicap, then adjusted by every earlier day's card).
 function leaderboard() {
   const schedule = rows("Schedule");
   const cards = rows("Cards");
   const players = rows("Players").map(r => r[0]).filter(Boolean);
+  const hcp = {};
+  players.forEach(p => { hcp[p] = handicapFor(p); });
 
   return schedule.map(s => {
     const day = String(s[0]);
     const course = String(s[1] || "").trim();
     const date = s[2] ? dateKey(s[2]) : "";
-    if (!course) return {day: day, course: "", rows: []};
+    const dayHcp = Object.assign({}, hcp);
+    if (!course || !COURSES[course]) return {day: day, course: course, rows: [], handicaps: dayHcp};
 
     // Newest card per player wins (lets a wrong card be corrected by resubmitting).
     const latest = {};
@@ -238,10 +267,11 @@ function leaderboard() {
 
     const out = players.map(p => {
       const hit = latest[p];
-      if (!hit) return {player: p, front: null, back: null, total: null, gross: null};
-      // Recalculated live, so handicap or allowance changes apply to old cards too.
-      const pts = stablefordPoints(course, hit.card.slice(5, 23).map(Number), handicapFor(p));
-      return {player: p, front: pts.front, back: pts.back, total: pts.total, gross: Number(hit.card[23])};
+      if (!hit) return {player: p, hcp: dayHcp[p], front: null, back: null, total: null, gross: null};
+      // Recalculated live, so handicap, allowance or earlier-card changes flow through.
+      const pts = stablefordPoints(course, hit.card.slice(5, 23).map(Number), dayHcp[p]);
+      hcp[p] = adjustedHandicap(dayHcp[p], pts.total);
+      return {player: p, hcp: dayHcp[p], front: pts.front, back: pts.back, total: pts.total, gross: Number(hit.card[23])};
     });
 
     // Points, then back-9 countback; players without a card go last.
@@ -256,8 +286,22 @@ function leaderboard() {
       if (!prev || prev.total !== r.total || prev.back !== r.back) pos = i + 1;
       r.pos = pos;
     });
-    return {day: day, course: course, rows: out};
+    return {day: day, course: course, rows: out, handicaps: dayHcp};
   });
+}
+
+// The handicap a player is on for the day this course is scheduled (today's
+// date picks between two days on the same course); start handicap if unscheduled.
+function dayHandicapFor(course, player) {
+  const today = Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd");
+  const sched = rows("Schedule");
+  const days = leaderboard();
+  let pick = -1;
+  sched.forEach((s, i) => {
+    if (String(s[1] || "").trim() !== course) return;
+    if (pick < 0 || (s[2] && dateKey(s[2]) === today)) pick = i;
+  });
+  return pick >= 0 && player in days[pick].handicaps ? days[pick].handicaps[player] : handicapFor(player);
 }
 
 function dateKey(v) {

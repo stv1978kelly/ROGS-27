@@ -168,7 +168,7 @@ t('a card shows on its course day only, and not once the day is cleared', () => 
   const d2 = days[2];   // Day 3 = Cabopino
   assert.strictEqual(d2.course, 'Cabopino');
   assert.strictEqual(d2.rows.length, 16);
-  assert.deepStrictEqual(d2.rows[0], { player: 'Steve Kelly', front: 18, back: 18, total: 36, gross: cabPar.reduce((a, b) => a + b), pos: 1 });
+  assert.deepStrictEqual(d2.rows[0], { player: 'Steve Kelly', hcp: SCRATCH_AT_CABOPINO, front: 18, back: 18, total: 36, gross: cabPar.reduce((a, b) => a + b), pos: 1 });
   assert.ok(d2.rows.slice(1).every(r => r.total === null && r.pos === null));
   ctx.__sheets.Schedule.data[3][1] = '';
   assert.strictEqual(get().days[2].rows.length, 0);
@@ -296,6 +296,48 @@ t('page course-handicap formula = script, every course and index', () => {
   for (const k of Object.keys(pageCourses))
     for (let i = -4; i <= 54; i += 0.1)
       assert.ok(Math.abs(pageCH(pageCourses[k], i) - vm.runInContext('courseHandicapExact', ctx)(k, i)) < 1e-9, k + ' ' + i);
+});
+
+// 7. Tour handicap adjustments (Steve's league rules).
+t('league adjustment arithmetic', () => {
+  const adj = vm.runInContext('adjustedHandicap', ctx);
+  const cases = [
+    [9, 46, 2], [9, 32, 9], [9, 30, 9], [9, 28, 9], [9, 33, 8.5], [9, 27, 9.5],   // League 1, 0.5
+    [10, 22, 13], [2, 46, -5],                                                    // 10 is League 1; can go plus
+    [17, 40, 10.6], [12, 20, 18.4], [10.5, 36, 7.3],                              // League 2, 0.8 (10.5 is over 10)
+    [19, 20, 27], [28, 33, 27], [30, 36, 26], [30, 20, 38]                        // League 3, 1 (over 28 too)
+  ];
+  cases.forEach(([h, pts, want]) => assert.strictEqual(adj(h, pts), want, h + ' @ ' + pts));
+});
+t('handicaps carry forward day by day; no card = no change; corrections flow through', () => {
+  const c2 = makeContext();
+  vm.runInContext('ensureSheets()', c2);
+  c2.__props.CARD_PIN = TEST_PIN;
+  c2.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 9;
+  c2.__sheets.Players.data.find(r => r[0] === 'Ally McKinlay')[1] = 6;
+  const C = vm.runInContext('COURSES', c2);
+  const post2 = b => JSON.parse(vm.runInContext('doPost', c2)({ postData: { contents: JSON.stringify(b) } }).body);
+  const get2 = () => JSON.parse(vm.runInContext('doGet', c2)({ parameter: { action: 'leaderboard' } }).body);
+  const steve = (course, scores) => post2({ player: 'Steve Kelly', course, submittedBy: 'Paddy Swan', scores, pin: TEST_PIN });
+
+  // Day 1 Torrequebrada, all pars off course 10 = 46 pts -> 9 - 0.5 x 14 = 2.0
+  assert.strictEqual(steve('Torrequebrada', C.Torrequebrada.par).ok, true);
+  let lb = get2();
+  assert.deepStrictEqual([lb.days[0].handicaps['Steve Kelly'], lb.days[0].rows[0].total, lb.days[1].handicaps['Steve Kelly']], [9, 46, 2]);
+  // Day 2 Calanova off 2.0 (course 2): pars = 38 -> 2 - 0.5 x 6 = -1.0 for Day 3
+  steve('Calanova', C.Calanova.par);
+  lb = get2();
+  assert.deepStrictEqual([lb.days[1].rows.find(r => r.player === 'Steve Kelly').total, lb.days[2].handicaps['Steve Kelly']], [38, -1]);
+  // the stored card points use the day's handicap, not the starting one
+  assert.strictEqual(c2.__sheets.Cards.data[2][26], 38);
+  // Ally never played: 6 on every day
+  lb.days.forEach(d => assert.strictEqual(d.handicaps['Ally McKinlay'], 6));
+  // Day 1 card corrected to all bogeys (28 pts off 10 -> no change) -> Day 2 back on 9 and re-scored
+  steve('Torrequebrada', C.Torrequebrada.par.map(p => p + 1));
+  lb = get2();
+  assert.deepStrictEqual([lb.days[0].rows.find(r => r.player === 'Steve Kelly').total, lb.days[1].handicaps['Steve Kelly']], [28, 9]);
+  assert.strictEqual(lb.days[1].rows.find(r => r.player === 'Steve Kelly').total, 46);   // Calanova pars off course 10
+  assert.strictEqual(lb.days[2].handicaps['Steve Kelly'], 2);
 });
 
 console.log('\n' + pass + ' passed');

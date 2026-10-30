@@ -1263,9 +1263,16 @@ function playingHandicap(player) {
   if (!hcpData || !(player in hcpData.handicaps) || !currentCourse) return null;
   const a = Number(hcpData.allowance);
   const allow = isNaN(a) || a <= 0 ? 1 : (a > 1.5 ? a / 100 : a);
-  const hcp = hcpData.handicaps[player];
+  const courseKey = document.getElementById('coursePlayed').value;
+  const dayHcps = hcpData.byCourse[courseKey];
+  const hcp = dayHcps && player in dayHcps ? dayHcps[player] : hcpData.handicaps[player];
   const exact = courseHandicapExact(currentCourse, hcp);
-  return { hcp: hcp, course: Math.round(exact), ph: Math.round(exact * allow) };
+  return { hcp: hcp, start: hcpData.handicaps[player], course: Math.round(exact), ph: Math.round(exact * allow) };
+}
+// 9 -> "9", 2 -> "2.0" once adjusted, -1 -> "+1.0" (plus handicap)
+function fmtHcp(h, adjusted) {
+  const v = adjusted ? Math.abs(h).toFixed(1) : String(Math.abs(h));
+  return (h < 0 ? '+' : '') + v;
 }
 
 function recalcPoints() {
@@ -1279,7 +1286,11 @@ function recalcPoints() {
   const h = player ? playingHandicap(player) : null;
   if (!player) line.textContent = 'Pick a player to see Stableford points';
   else if (!h) line.textContent = player + ' - handicap not loaded yet (needs signal)';
-  else line.textContent = player + ' \u00b7 HCP ' + h.hcp + ' \u00b7 Course ' + h.course + ' \u00b7 Playing ' + h.ph;
+  else {
+    const moved = h.hcp !== h.start;
+    line.textContent = player + ' \u00b7 HCP ' + fmtHcp(h.hcp, moved) + (moved ? ' (start ' + fmtHcp(h.start, false) + ')' : '') +
+      ' \u00b7 Course ' + fmtHcp(h.course, false) + ' \u00b7 Playing ' + fmtHcp(h.ph, false);
+  }
 
   let f = 0, b = 0, any = false;
   currentCourse.holes.forEach(([hole, , par, si]) => {
@@ -1433,7 +1444,7 @@ function buildDayPages() {
     html += '<div class="day-course-name" id="dayCourse' + d + '">Course: TBC</div></div>';
     html += '<div class="section-label"><span>Stableford Leaderboard</span></div>';
     html += '<table class="leaderboard"><thead><tr>';
-    html += '<th>Pos</th><th class="lb-player">Player</th><th>Front 9</th><th>Back 9</th><th class="lb-pts">Points</th>';
+    html += '<th>Pos</th><th class="lb-player">Player</th><th>HCP</th><th>Out</th><th>In</th><th class="lb-pts">Points</th>';
     html += '</tr></thead><tbody id="dayBody' + d + '"></tbody></table>';
     html += '<p class="day-note" id="dayNote' + d + '"></p>';
     html += '</div>';
@@ -1523,17 +1534,18 @@ function renderDay(d, day) {
   if (!rows) {
     rows = Array.from(document.getElementById('playerName').options)
       .map(o => o.value).filter(Boolean)
-      .map(p => ({ pos: null, player: p, front: null, back: null, total: null }));
+      .map(p => ({ pos: null, player: p, hcp: day && day.handicaps ? day.handicaps[p] : null, front: null, back: null, total: null }));
   }
   const dash = v => (v === null || v === undefined ? '-' : v);
   const tbody = document.getElementById('dayBody' + d);
   tbody.innerHTML = '';
   rows.forEach(r => {
     const tr = document.createElement('tr');
-    [dash(r.pos), r.player, dash(r.front), dash(r.back), dash(r.total)].forEach((v, i) => {
+    const hcpCell = r.hcp === null || r.hcp === undefined ? '-' : fmtHcp(r.hcp, !Number.isInteger(r.hcp));
+    [dash(r.pos), r.player, hcpCell, dash(r.front), dash(r.back), dash(r.total)].forEach((v, i) => {
       const td = document.createElement('td');
       if (i === 1) td.className = 'lb-player';
-      if (i === 4) td.className = 'lb-pts';
+      if (i === 5) td.className = 'lb-pts';
       td.textContent = v;
       tr.appendChild(td);
     });
@@ -1555,7 +1567,13 @@ async function loadLeaderboard() {
     if (!data.ok) throw new Error(data.error);
     data.days.slice(0, 5).forEach((day, i) => renderDay(i + 1, day));
     renderOverall(data.days);
-    if (data.handicaps) { hcpData = { handicaps: data.handicaps, allowance: data.allowance }; recalcPoints(); }
+    if (data.handicaps) {
+      // Each scheduled course -> the handicaps going into that day (first day it's played).
+      const byCourse = {};
+      data.days.forEach(d => { if (d.course && d.handicaps && !byCourse[d.course]) byCourse[d.course] = d.handicaps; });
+      hcpData = { handicaps: data.handicaps, allowance: data.allowance, byCourse: byCourse };
+      recalcPoints();
+    }
     renderNotifications(data.notifications || []);
   } catch (e) {
     for (let d = 1; d <= 5; d++) {
