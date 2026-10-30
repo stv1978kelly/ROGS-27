@@ -480,6 +480,34 @@
     margin-top: 12px;
   }
 
+  /* ── PIN GATE (tap the ROGS 2027 title for the score card) ── */
+  .header h1 { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .pin-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(13,24,48,0.92);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .pin-overlay.open { display: flex; }
+  .pin-box {
+    width: 100%; max-width: 300px;
+    background: #1a2a5c; border: 2px solid #d4a017; border-radius: 14px;
+    padding: 18px 18px 16px; text-align: center;
+  }
+  .pin-box h2 { font-family: 'Playfair Display', serif; color: #d4a017; font-size: 1.15em; letter-spacing: 1px; }
+  .pin-box p { color: #a0b0d4; font-size: 0.8em; margin: 4px 0 14px; }
+  .pin-box input {
+    width: 100%; padding: 12px; border: 2px solid #c8cfe0; border-radius: 10px;
+    font-family: 'Inter', sans-serif; font-size: 1.6em; font-weight: 700;
+    letter-spacing: 12px; text-align: center; color: #1a2a5c; background: #fff;
+  }
+  .pin-box input:focus { outline: none; border-color: #d4a017; }
+  .pin-error { color: #ff8888; font-size: 0.8em; font-weight: 600; min-height: 1.3em; margin-top: 8px; }
+  .pin-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .pin-actions .btn { flex: 1; padding: 11px 0; }
+  .pin-box.shake { animation: pinShake 0.35s; }
+  @keyframes pinShake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
   /* ── HOME PAGE: champions feature ── */
   .champ-feature {
     max-width: 520px; margin: 0 auto;
@@ -626,7 +654,7 @@
 
 <div class="card-container">
   <div class="header">
-    <h1><span class="golf-icon">&#9971;</span> ROGS 2027 <span class="golf-icon">&#9971;</span></h1>
+    <h1 id="siteTitle" role="button" tabindex="0" aria-label="Open the score card (PIN needed)"><span class="golf-icon">&#9971;</span> ROGS 2027 <span class="golf-icon">&#9971;</span></h1>
     <div class="subtitle">Malaga</div>
     <div class="header-icons">
       <button class="icon-btn" id="homeBtn" aria-label="Home" title="Home">
@@ -642,7 +670,6 @@
 
   <div class="tab-bar" id="tabBar">
     <button class="tab-btn active" data-tab="page-home">Home</button>
-    <button class="tab-btn" data-tab="page-card">Score Card</button>
     <button class="tab-btn" data-tab="page-day1">Day 1</button>
     <button class="tab-btn" data-tab="page-day2">Day 2</button>
     <button class="tab-btn" data-tab="page-day3">Day 3</button>
@@ -816,6 +843,19 @@
       <div class="champ-name"><div class="role">Past champion</div><div class="who">Rick Kennedy</div><div class="side">right</div></div>
     </div>
   </div>
+</div>
+
+<div class="pin-overlay" id="pinOverlay">
+  <form class="pin-box" id="pinBox" autocomplete="off">
+    <h2>Score Card</h2>
+    <p>Enter the 4-digit PIN</p>
+    <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="PIN">
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-actions">
+      <button type="button" class="btn btn-danger" id="pinCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary">OK</button>
+    </div>
+  </form>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1215,7 +1255,9 @@ async function submitCard() {
     }
   }
 
-  const card = { player: player, course: course, submittedBy: submitter, scores: [] };
+  const pin = savedPin();
+  if (!pin) { openPinGate(); showToast('PIN needed again - enter it, then submit.', 'error'); return; }
+  const card = { player: player, course: course, submittedBy: submitter, scores: [], pin: pin };
   for (let i = 1; i <= 18; i++) card.scores.push(parseInt(document.getElementById('h' + i).value));
 
   setSubmitting(true);
@@ -1232,7 +1274,11 @@ async function submitCard() {
     setSubmitting(false);
   }
 
-  if (!reply.ok) { showToast('Not saved: ' + reply.error, 'error'); return; }
+  if (!reply.ok) {
+    if (reply.pinRejected) { store.set('rogsPin', ''); openPinGate(); }
+    showToast('Not saved: ' + reply.error, 'error');
+    return;
+  }
 
   existingSubmissions.push({ player: player, course: course });
   showToast('Score card saved!', 'success');
@@ -1488,6 +1534,56 @@ document.getElementById('champPhoto').addEventListener('click', () => champOverl
 document.getElementById('champClose').addEventListener('click', () => champOverlay.classList.remove('open'));
 champOverlay.addEventListener('click', e => { if (e.target === champOverlay) champOverlay.classList.remove('open'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') champOverlay.classList.remove('open'); });
+
+// ── PIN gate for the score card ──
+// The page only holds a salted SHA-256 of the PIN (the repo is public); the
+// scores sheet checks the real PIN on every card. A correct PIN is remembered
+// on this phone for 24 hours so markers aren't re-entering it per card.
+const PIN_HASH = '51e5fd935c03363e653ff1486e167f05ef75ecafd445bb105da58369b1a1dec1';
+const PIN_SALT = 'rogs27:';
+const PIN_KEEP_MS = 24 * 60 * 60 * 1000;
+
+async function pinHash(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(PIN_SALT + pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function savedPin() {
+  try {
+    const v = JSON.parse(store.get('rogsPin') || 'null');
+    return v && v.until > Date.now() ? v.pin : '';
+  } catch (e) { return ''; }
+}
+function openPinGate() {
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('pinInput').focus(), 50);
+}
+function closePinGate() { document.getElementById('pinOverlay').classList.remove('open'); }
+function openScoreCard() {
+  if (savedPin()) { showTab('page-card'); window.scrollTo(0, 0); }
+  else openPinGate();
+}
+
+document.getElementById('siteTitle').addEventListener('click', openScoreCard);
+document.getElementById('siteTitle').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openScoreCard(); } });
+document.getElementById('pinCancel').addEventListener('click', closePinGate);
+document.getElementById('pinOverlay').addEventListener('click', e => { if (e.target.id === 'pinOverlay') closePinGate(); });
+document.getElementById('pinBox').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pin = document.getElementById('pinInput').value.trim();
+  if (await pinHash(pin) === PIN_HASH) {
+    store.set('rogsPin', JSON.stringify({ pin: pin, until: Date.now() + PIN_KEEP_MS }));
+    closePinGate();
+    showTab('page-card');
+    window.scrollTo(0, 0);
+  } else {
+    const box = document.getElementById('pinBox');
+    document.getElementById('pinError').textContent = 'Wrong PIN';
+    document.getElementById('pinInput').value = '';
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+  }
+});
 
 // ── Tabs ──
 function showTab(id) {

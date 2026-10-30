@@ -12,8 +12,11 @@
 //   Notifications - Posted | Message   (type a Message; Posted stamps itself)
 //
 // Endpoints:
-//   POST  body = JSON {player, course, submittedBy, scores:[18]}
-//         -> {ok:true} or {ok:false, error}
+//   POST  body = JSON {player, course, submittedBy, scores:[18], pin}
+//         -> {ok:true} or {ok:false, error, pinRejected?}
+//
+// Card PIN: kept in Script Properties as CARD_PIN (Project Settings > Script
+// Properties), never in this file - the repo is public.
 //   GET   ?action=leaderboard -> {ok:true, days:[...], notifications:[...]}
 
 // ── Course data: par and stroke index per hole (holes 1-18) ──
@@ -64,6 +67,9 @@ function doPost(e) {
     lock.waitLock(20000);
     ensureSheets();
     const card = JSON.parse(e.postData.contents);
+    const pin = PropertiesService.getScriptProperties().getProperty("CARD_PIN");
+    if (!pin) return json({ok: false, error: "Card PIN isn't set up on the scores sheet yet."});
+    if (String(card.pin || "") !== String(pin)) return json({ok: false, error: "Wrong PIN.", pinRejected: true});
     const err = validateCard(card);
     if (err) return json({ok: false, error: err});
     saveCard(card);

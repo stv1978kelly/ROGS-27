@@ -8,6 +8,8 @@ const { makeContext, REPO } = require('./harness');
 const PORT = 8812;
 const ctx = makeContext();
 vm.runInContext('ensureSheets()', ctx);
+// Demo card PIN: set ROGS_DEMO_PIN in the environment (not stored in the repo).
+if (process.env.ROGS_DEMO_PIN) ctx.__props.CARD_PIN = process.env.ROGS_DEMO_PIN;
 ['Torrequebrada', 'Calanova', 'Cabopino', '', ''].forEach((c, i) => (ctx.__sheets.Schedule.data[i + 1][1] = c));   // Days 1-3 scheduled; 4-5 left TBC for the demo
 // Demo notifications: one fresh (bannered), one three days old (listed only).
 ctx.__sheets.Notifications.data.push([new Date(Date.now() - 3 * 3600e3), 'Bus to Torrequebrada leaves the hotel at 8:15 sharp.']);

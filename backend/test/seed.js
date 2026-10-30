@@ -26,7 +26,7 @@ const cards = [
 
 (async () => {
   for (const [player, course, scores] of cards) {
-    const res = await fetch('http://127.0.0.1:8812/exec', { method: 'POST', body: JSON.stringify({ player, course, submittedBy: 'Titch Walton', scores }) });
+    const res = await fetch('http://127.0.0.1:8812/exec', { method: 'POST', body: JSON.stringify({ player, course, submittedBy: 'Titch Walton', scores, pin: process.env.ROGS_DEMO_PIN }) });
     console.log(player.padEnd(16), course.padEnd(14), JSON.stringify(await res.json()));
   }
 })();

@@ -84,7 +84,8 @@ t('allowance 95 (typed as 95) gives PH 17: SI 18 hole loses its shot', () => {
 // 3. Endpoints.
 const post = body => JSON.parse(vm.runInContext('doPost', ctx)({ postData: { contents: JSON.stringify(body) } }).body);
 const get = () => JSON.parse(vm.runInContext('doGet', ctx)({ parameter: { action: 'leaderboard' } }).body);
-const card = (player, course, scores, by = 'Paddy Swan') => ({ player, course, submittedBy: by, scores });
+const TEST_PIN = '4321';   // dummy - the real PIN lives only in Script Properties
+const card = (player, course, scores, by = 'Paddy Swan', pin = TEST_PIN) => ({ player, course, submittedBy: by, scores, pin });
 
 t('sheets created with the 2027 schedule', () => {
   assert.deepStrictEqual(Object.keys(ctx.__sheets).sort(), ['Cards', 'Notifications', 'Players', 'Schedule', 'Settings']);
@@ -122,6 +123,28 @@ t('schedule course column is a dropdown of the 5 courses', () => {
 t('ensureSheets twice is harmless', () => {
   vm.runInContext('ensureSheets()', ctx);
   assert.strictEqual(ctx.__sheets.Players.data.length, 17);
+});
+t('PIN: none set up -> every card refused, nothing written', () => {
+  const r = post(card('Steve Kelly', 'Cabopino', cabPar));
+  assert.strictEqual(r.ok, false);
+  assert.match(r.error, /PIN isn't set up/);
+  assert.strictEqual(ctx.__sheets.Cards.data.length, 1);
+  ctx.__props.CARD_PIN = TEST_PIN;
+});
+t('PIN: wrong or missing -> refused with pinRejected, nothing written', () => {
+  for (const bad of ['0000', '', null, 4320, 'no pin field']) {
+    const c = card('Steve Kelly', 'Cabopino', cabPar, 'Paddy Swan', bad);
+    if (bad === 'no pin field') delete c.pin;
+    const r = post(c);
+    assert.deepStrictEqual([r.ok, r.pinRejected], [false, true], String(bad));
+  }
+  assert.strictEqual(ctx.__sheets.Cards.data.length, 1);
+});
+t('PIN: right PIN is checked before the card itself', () => {
+  const r = post(card('Steve Kelly', 'Cabopino', cabPar, 'Steve Kelly'));   // right PIN, own card
+  assert.strictEqual(r.error, 'You cannot submit your own score card!');
+  assert.strictEqual(Number(post(card('Steve Kelly', 'Cabopino', cabPar, 'Paddy Swan', Number(TEST_PIN))).ok), 1);   // a number PIN works too
+  ctx.__sheets.Cards.data.pop();
 });
 t('bad cards rejected', () => {
   assert.strictEqual(post(card('Steve Kelly', 'Cabopino', cabPar, 'Steve Kelly')).ok, false);

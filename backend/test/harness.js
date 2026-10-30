@@ -5,6 +5,7 @@ const REPO = require('path').join(__dirname, '..', '..');
 
 function makeContext() {
   const sheets = {};
+  const props = {};
   const mkSheet = name => {
     const data = [];
     const sh = {
@@ -51,6 +52,7 @@ function makeContext() {
       createTextOutput: s => ({ body: s, setMimeType() { return this; } })
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in props ? props[k] : null) }) },
     Utilities: {
       formatDate: (d, tz) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
     }
@@ -58,6 +60,7 @@ function makeContext() {
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(REPO + '/backend/Code.gs', 'utf8'), ctx);
   ctx.__sheets = sheets;
+  ctx.__props = props;
   return ctx;
 }
 
