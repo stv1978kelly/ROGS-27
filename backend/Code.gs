@@ -17,7 +17,8 @@
 //
 // Card PIN: kept in Script Properties as CARD_PIN (Project Settings > Script
 // Properties), never in this file - the repo is public.
-//   GET   ?action=leaderboard -> {ok:true, days:[...], notifications:[...]}
+//   GET   ?action=leaderboard -> {ok:true, days:[...], notifications:[...],
+//                                 handicaps:{player: hcp}, allowance}
 
 // ── Course data: par and stroke index per hole (holes 1-18) ──
 // Keep in step with COURSES in index.html.
@@ -85,7 +86,8 @@ function doGet(e) {
   try {
     ensureSheets();
     const action = (e && e.parameter && e.parameter.action) || "leaderboard";
-    if (action === "leaderboard") return json({ok: true, days: leaderboard(), notifications: notifications()});
+    if (action === "leaderboard") return json({ok: true, days: leaderboard(), notifications: notifications(),
+                                                handicaps: handicaps(), allowance: allowance()});
     return json({ok: false, error: "Unknown action: " + action});
   } catch (ex) {
     return json({ok: false, error: String(ex)});
@@ -173,6 +175,14 @@ function handicapFor(player) {
   const r = rows("Players").find(r => r[0] === player);
   const h = r ? Number(r[1]) : 0;
   return isNaN(h) ? 0 : h;
+}
+
+// {player: handicap} for the score card's live Stableford points.
+function handicaps() {
+  return rows("Players").reduce((m, r) => {
+    if (r[0]) { const h = Number(r[1]); m[r[0]] = isNaN(h) ? 0 : h; }
+    return m;
+  }, {});
 }
 
 // Shots received on a hole of stroke index si for playing handicap ph.

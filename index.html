@@ -201,6 +201,15 @@
   .scorecard .row-par .par3 { background: #90d990; color: #1a5c1a; }
   .scorecard .row-par .par5 { background: #f0a0a0; color: #8b1a1a; }
 
+  /* Points row (Stableford, live) */
+  .scorecard .row-pts td { background: #fdf6e0; color: #1a2a5c; font-weight: 700; padding: 4px 0; }
+  .scorecard .row-pts .label-col { background: #d4a017; color: #1a2a5c; }
+  .scorecard .row-pts td.pts-0 { color: #c0392b; }
+  .scorecard .row-pts td.pts-3 { color: #1a7a1a; }
+  .scorecard .row-hcp td .shots { color: #d4a017; font-weight: 900; margin-left: 1px; }
+  .course-banner .player-hcp { color: #fff; font-size: 0.75em; font-weight: 600; margin-top: 3px; }
+  .total-box.points .value { color: #fff; }
+
   /* S.I. row */
   .scorecard .row-hcp td { background: #f0f0f0; color: #666; font-size: 0.85em; padding: 3px 0; }
   .scorecard .row-hcp .label-col { background: #f0f0f0; color: #666; }
@@ -783,6 +792,7 @@
     <div class="course-banner" id="courseBanner">
       <h2 id="courseTitle"></h2>
       <div class="course-par" id="coursePar"></div>
+      <div class="player-hcp" id="playerHcp"></div>
     </div>
 
     <!-- FRONT 9 -->
@@ -813,6 +823,11 @@
         <div class="label">Total</div>
         <div class="value" id="summaryTotal">-</div>
         <div class="vs-par" id="vsParTotal"></div>
+      </div>
+      <div class="total-box points">
+        <div class="label">Points</div>
+        <div class="value" id="summaryPts">-</div>
+        <div class="vs-par even" id="ptsSplit"></div>
       </div>
     </div>
 
@@ -1072,7 +1087,7 @@ function buildHalf(bodyId, holes, startIdx) {
   // Row: S.I.
   html += '<tr class="row-hcp">';
   html += '<td class="label-col">S.I.</td>';
-  nine.forEach(h => { html += '<td>' + h[3] + '</td>'; });
+  nine.forEach(h => { html += '<td id="si' + h[0] + '">' + h[3] + '</td>'; });
   html += '<td class="total-col"></td>';
   html += '</tr>';
 
@@ -1086,6 +1101,13 @@ function buildHalf(bodyId, holes, startIdx) {
   });
   const totalId = isBack ? "backTotal" : "frontTotal";
   html += '<td class="total-col" id="' + totalId + '">-</td>';
+  html += '</tr>';
+
+  // Row: Stableford points (filled by recalc once the handicap is known)
+  html += '<tr class="row-pts">';
+  html += '<td class="label-col">Pts</td>';
+  nine.forEach(h => { html += '<td id="p' + h[0] + '"></td>'; });
+  html += '<td class="total-col" id="' + (isBack ? 'backPts' : 'frontPts') + '">-</td>';
   html += '</tr>';
 
   tbody.innerHTML = html;
@@ -1210,6 +1232,62 @@ function recalc() {
     setVsPar('vsParBack', back, backPar, bCount === 9);
     setVsPar('vsParTotal', front + back, frontPar + backPar, fCount + bCount === 18);
   }
+  recalcPoints();
+}
+
+// ── Live Stableford points ──
+// Same maths as backend/Code.gs (shotsOnHole / stablefordPoints) - the test
+// suite checks the two agree. Handicaps + allowance come from the sheet.
+let hcpData = null;   // {handicaps: {player: hcp}, allowance}
+
+function shotsOnHole(ph, si) {
+  if (ph >= 0) return Math.floor(ph / 18) + (si <= ph % 18 ? 1 : 0);
+  const p = -ph;
+  const n = Math.floor(p / 18) + (si > 18 - p % 18 ? 1 : 0);
+  return n ? -n : 0;
+}
+function stablefordHole(par, si, ph, score) {
+  return Math.max(0, 2 + par + shotsOnHole(ph, si) - score);
+}
+function playingHandicap(player) {
+  if (!hcpData || !(player in hcpData.handicaps)) return null;
+  const a = Number(hcpData.allowance);
+  const allow = isNaN(a) || a <= 0 ? 1 : (a > 1.5 ? a / 100 : a);
+  return { hcp: hcpData.handicaps[player], ph: Math.round(hcpData.handicaps[player] * allow) };
+}
+
+function recalcPoints() {
+  const player = document.getElementById('playerName').value;
+  const line = document.getElementById('playerHcp');
+  const box = document.getElementById('summaryPts');
+  const split = document.getElementById('ptsSplit');
+  box.textContent = '-'; split.textContent = '';
+  if (!currentCourse) { line.textContent = ''; return; }
+
+  const h = player ? playingHandicap(player) : null;
+  if (!player) line.textContent = 'Pick a player to see Stableford points';
+  else if (!h) line.textContent = player + ' - handicap not loaded yet (needs signal)';
+  else line.textContent = player + ' \u00b7 HCP ' + h.hcp + ' \u00b7 Playing ' + h.ph;
+
+  let f = 0, b = 0, any = false;
+  currentCourse.holes.forEach(([hole, , par, si]) => {
+    const cell = document.getElementById('p' + hole);
+    const siCell = document.getElementById('si' + hole);
+    const shots = h ? shotsOnHole(h.ph, si) : 0;
+    siCell.innerHTML = si + (shots > 0 ? '<span class="shots">' + '\u2022'.repeat(Math.min(shots, 3)) + '</span>' : '');
+    const score = parseInt(document.getElementById('h' + hole).value);
+    cell.className = '';
+    if (!h || isNaN(score)) { cell.textContent = ''; return; }
+    const pts = stablefordHole(par, si, h.ph, score);
+    cell.textContent = pts;
+    if (pts === 0) cell.className = 'pts-0';
+    if (pts >= 3) cell.className = 'pts-3';
+    any = true;
+    if (hole <= 9) f += pts; else b += pts;
+  });
+  document.getElementById('frontPts').textContent = any ? f : '-';
+  document.getElementById('backPts').textContent = any ? b : '-';
+  if (any) { box.textContent = f + b; split.textContent = f + ' + ' + b; }
 }
 
 function setVsPar(elId, score, par, complete) {
@@ -1247,6 +1325,7 @@ document.getElementById('playerName').addEventListener('change', function() {
   if (sub.value === player) sub.value = '';
   Array.from(sub.options).forEach(opt => { opt.disabled = (opt.value && opt.value === player); });
   checkDuplicate();
+  recalcPoints();
 });
 
 function checkDuplicate() {
@@ -1464,6 +1543,7 @@ async function loadLeaderboard() {
     if (!data.ok) throw new Error(data.error);
     data.days.slice(0, 5).forEach((day, i) => renderDay(i + 1, day));
     renderOverall(data.days);
+    if (data.handicaps) { hcpData = { handicaps: data.handicaps, allowance: data.allowance }; recalcPoints(); }
     renderNotifications(data.notifications || []);
   } catch (e) {
     for (let d = 1; d <= 5; d++) {

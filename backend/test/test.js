@@ -245,4 +245,36 @@ t('feed is newest first, skips blank messages, lists untimed ones last, rides on
   ]);
 });
 
+// 5. Live points on the score card page must match the script.
+const pageFns = vm.createContext({ Math, Number, isNaN });
+vm.runInContext(['shotsOnHole', 'stablefordHole'].map(n => html.match(new RegExp('function ' + n + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0]).join('\n'), pageFns);
+t('page Stableford maths = script, every course, handicaps -4..40, allowance 100% and 95%', () => {
+  const gsPoints = vm.runInContext('stablefordPoints', ctx);
+  let checked = 0, seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (const allowance of [1, 0.95]) {
+    ctx.__sheets.Settings.data[1][1] = allowance;
+    for (const k of Object.keys(gsCourses)) {
+      for (let hcp = -4; hcp <= 40; hcp++) {
+        const scores = gsCourses[k].par.map(p => Math.max(1, p + Math.floor(rnd() * 6) - 2));
+        const gs = gsPoints(k, scores, hcp).perHole;
+        const ph = Math.round(hcp * allowance);
+        const page = scores.map((sc, i) => pageFns.stablefordHole(gsCourses[k].par[i], gsCourses[k].si[i], ph, sc));
+        assert.deepStrictEqual(page, gs, k + ' hcp ' + hcp + ' @' + allowance);
+        checked++;
+      }
+    }
+  }
+  ctx.__sheets.Settings.data[1][1] = 1;
+  assert.strictEqual(checked, 2 * 5 * 45);
+});
+t('leaderboard call carries handicaps and the allowance for the page', () => {
+  ctx.__sheets.Players.data.find(r => r[0] === 'Owen Evans')[1] = 30;
+  const lb = get();
+  assert.strictEqual(lb.handicaps['Owen Evans'], 30);
+  assert.strictEqual(Object.keys(lb.handicaps).length, 16);
+  assert.strictEqual(lb.allowance, 1);
+  ctx.__sheets.Players.data.find(r => r[0] === 'Owen Evans')[1] = 0;
+});
+
 console.log('\n' + pass + ' passed');
