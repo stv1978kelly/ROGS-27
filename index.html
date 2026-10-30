@@ -480,6 +480,13 @@
     margin-top: 12px;
   }
 
+  /* ── THEME TUNE (top left) ── */
+  .icon-btn.music-btn { position: absolute; top: 10px; left: 12px; }   /* beats .icon-btn position: relative */
+  .music-btn .icon-off { display: none; }
+  .music-btn.stopped .icon-on { display: none; }
+  .music-btn.stopped .icon-off { display: block; }
+  .music-btn.unavailable { opacity: 0.35; cursor: default; }
+
   /* ── PIN GATE (tap the ROGS 2027 title for the score card) ── */
   .header h1 { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .pin-overlay {
@@ -525,6 +532,15 @@
     background: url('img/champs.jpg') center 36% / cover no-repeat, #0d1830;   /* the two of them + shield */
   }
   .champ-hint { text-align: center; font-size: 0.65em; color: #a0b0d4; padding-top: 6px; }
+
+  /* ── HOME PAGE: The Open Theme video ── */
+  .theme-video { max-width: 520px; margin: 18px auto 0; }
+  .video-frame {
+    position: relative; aspect-ratio: 16 / 9;
+    border: 2px solid #d4a017; border-radius: 12px; overflow: hidden;
+    background: #0d1830;
+  }
+  .video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
   /* ── HOME PAGE: sponsors ── */
   .sponsors { max-width: 520px; margin: 18px auto 0; }
@@ -640,6 +656,7 @@
     .header-icons { top: 8px; right: 8px; gap: 6px; }
     .icon-btn { width: 32px; height: 32px; }
     .notif-panel { top: 46px; right: 8px; }
+    .icon-btn.music-btn { top: 8px; left: 8px; }
     .leaderboard { font-size: 0.8em; }
     .leaderboard.overall td, .leaderboard.overall th { padding-left: 2px; padding-right: 2px; }
   }
@@ -656,6 +673,10 @@
   <div class="header">
     <h1 id="siteTitle" role="button" tabindex="0" aria-label="Open the score card (PIN needed)"><span class="golf-icon">&#9971;</span> ROGS 2027 <span class="golf-icon">&#9971;</span></h1>
     <div class="subtitle">Malaga</div>
+    <button class="icon-btn music-btn stopped" id="musicBtn" aria-label="Play the theme tune" title="Theme tune">
+      <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+      <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
+    </button>
     <div class="header-icons">
       <button class="icon-btn" id="homeBtn" aria-label="Home" title="Home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
@@ -694,6 +715,12 @@
       </div>
     </div>
     <p class="champ-hint">Tap the photo to see it full size</p>
+
+    <!-- "The Open Theme" - The R&A's official YouTube video, embedded (YouTube requires the player to stay visible) -->
+    <div class="theme-video">
+      <div class="section-label"><span>The Open Theme</span></div>
+      <div class="video-frame"><div id="ytPlayer"></div></div>
+    </div>
 
     <!-- Sponsors: one <a class="sponsor"> per sponsor, logos in img/sponsors/ -->
     <div class="sponsors">
@@ -1534,6 +1561,62 @@ document.getElementById('champPhoto').addEventListener('click', () => champOverl
 document.getElementById('champClose').addEventListener('click', () => champOverlay.classList.remove('open'));
 champOverlay.addEventListener('click', e => { if (e.target === champOverlay) champOverlay.classList.remove('open'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') champOverlay.classList.remove('open'); });
+
+// ── Theme tune: The Open Theme (The R&A's YouTube video, on the Home page) ──
+// Browsers block sound until the visitor touches the page, so it starts on the
+// first tap anywhere (unless this phone muted it before). The speaker button
+// stops it / plays it again from the start. Taps inside the video itself go to
+// YouTube's own controls.
+const THEME_VIDEO = 'PHbxwkl_g_g';
+const musicBtn = document.getElementById('musicBtn');
+let yt = null, ytReady = false, themeStarted = false, playWhenReady = false;
+
+function showMusic(playing) {
+  musicBtn.classList.toggle('stopped', !playing);
+  musicBtn.setAttribute('aria-label', playing ? 'Stop the theme tune' : 'Play the theme tune');
+}
+function playTheme(fromStart) {
+  if (musicBtn.classList.contains('unavailable')) return;
+  themeStarted = true;
+  if (!ytReady) { playWhenReady = true; return; }
+  if (fromStart) yt.seekTo(0, true);
+  yt.playVideo();
+}
+function themePlaying() { return ytReady && yt.getPlayerState() === 1; }
+
+window.onYouTubeIframeAPIReady = function() {
+  yt = new YT.Player('ytPlayer', {
+    videoId: THEME_VIDEO,
+    playerVars: { playsinline: 1, rel: 0 },
+    events: {
+      onReady: () => { ytReady = true; yt.setVolume(60); if (playWhenReady) yt.playVideo(); },
+      onStateChange: e => showMusic(e.data === 1),
+      onError: () => { musicBtn.classList.add('unavailable'); musicBtn.title = 'Theme tune unavailable'; showMusic(false); }
+    }
+  });
+};
+(function loadYouTube() {
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  tag.onerror = () => { musicBtn.classList.add('unavailable'); musicBtn.title = 'Theme tune unavailable'; };
+  document.head.appendChild(tag);
+})();
+
+function firstTouch(e) {
+  if (themeStarted || musicBtn.contains(e.target)) return;
+  if (store.get('rogsMusicMuted') !== '1') playTheme(false);
+  else themeStarted = true;
+}
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, firstTouch, true));
+musicBtn.addEventListener('click', () => {
+  if (themePlaying()) {
+    yt.pauseVideo();
+    store.set('rogsMusicMuted', '1');
+  } else {
+    store.set('rogsMusicMuted', '0');
+    playTheme(true);
+  }
+});
 
 // ── PIN gate for the score card ──
 // The page only holds a salted SHA-256 of the PIN (the repo is public); the
