@@ -500,7 +500,10 @@
 
   /* ── HOME PAGE: sponsors ── */
   .sponsors { max-width: 520px; margin: 18px auto 0; }
-  .sponsor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  /* All in one row on wider screens; two per row on phones, an odd last one centred. */
+  .sponsor-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .sponsor-grid .sponsor { flex: 1 1 0; min-width: 0; }
+  @media (max-width: 700px) { .sponsor-grid .sponsor { flex: 0 0 calc(50% - 6px); } }
   .sponsor {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     padding: 16px 10px 12px;
@@ -676,6 +679,10 @@
         <a class="sponsor" href="https://www.barriernetworks.com/" target="_blank" rel="noopener">
           <img src="img/sponsors/barrier-networks.webp" alt="Barrier Networks logo">
           <span>Barrier Networks</span>
+        </a>
+        <a class="sponsor" href="https://www.exclusive-networks.com/uk" target="_blank" rel="noopener">
+          <img src="img/sponsors/exclusive-networks.svg" alt="Exclusive Networks logo">
+          <span>Exclusive Networks</span>
         </a>
       </div>
     </div>
