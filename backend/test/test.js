@@ -58,6 +58,8 @@ t('shots received', () => {
 });
 
 vm.runInContext('ensureSheets()', ctx);
+const SCRATCH_AT_CABOPINO = 2;
+ctx.__sheets.Players.data.slice(1).forEach(r => (r[1] = SCRATCH_AT_CABOPINO));
 const sp = (course, scores) => vm.runInContext('stablefordPoints', ctx)(course, scores, vm.runInContext('handicapFor', ctx)('Steve Kelly'));
 const cabPar = gsCourses.Cabopino.par;
 t('gross: all pars = 36 pts', () => assert.strictEqual(sp('Cabopino', cabPar).total, 36));
@@ -67,8 +69,8 @@ t('gross: birdie 3, bogey 1, double 0, triple still 0', () => {
   assert.deepStrictEqual(r.perHole.slice(0, 4), [3, 1, 0, 0]);
   assert.strictEqual(r.total, 36 + 1 - 1 - 2 - 2);
 });
-t('handicap 18 at 100%: all bogeys = 36 pts', () => {
-  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 18;
+t('index 17.3 = course 18 at Cabopino: all bogeys = 36 pts', () => {
+  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 17.3;
   assert.strictEqual(sp('Cabopino', cabPar.map(p => p + 1)).total, 36);
 });
 t('allowance 95 (typed as 95) gives PH 17: SI 18 hole loses its shot', () => {
@@ -78,7 +80,7 @@ t('allowance 95 (typed as 95) gives PH 17: SI 18 hole loses its shot', () => {
   assert.strictEqual(r.perHole[si18], 1);
   assert.strictEqual(r.total, 35);
   ctx.__sheets.Settings.data[1][1] = 1;
-  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 0;
+  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = SCRATCH_AT_CABOPINO;
 });
 
 // 3. Endpoints.
@@ -189,9 +191,9 @@ t('resubmitting replaces the old card', () => {
   assert.strictEqual(get().days[2].rows.find(r => r.player === 'Steve Kelly').total, 34);
 });
 t('handicap added later recalculates old cards', () => {
-  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 18;
+  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 17.3;
   assert.strictEqual(get().days[2].rows.find(r => r.player === 'Steve Kelly').total, 52);
-  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = 0;
+  ctx.__sheets.Players.data.find(r => r[0] === 'Steve Kelly')[1] = SCRATCH_AT_CABOPINO;
 });
 t('same course on two days split by Date', () => {
   ctx.__sheets.Schedule.data[3][2] = '2030-01-01';  // Day 3 dated in the future: no cards match
@@ -258,7 +260,7 @@ t('page Stableford maths = script, every course, handicaps -4..40, allowance 100
       for (let hcp = -4; hcp <= 40; hcp++) {
         const scores = gsCourses[k].par.map(p => Math.max(1, p + Math.floor(rnd() * 6) - 2));
         const gs = gsPoints(k, scores, hcp).perHole;
-        const ph = Math.round(hcp * allowance);
+        const ph = Math.round(vm.runInContext('courseHandicapExact', ctx)(k, hcp) * allowance);
         const page = scores.map((sc, i) => pageFns.stablefordHole(gsCourses[k].par[i], gsCourses[k].si[i], ph, sc));
         assert.deepStrictEqual(page, gs, k + ' hcp ' + hcp + ' @' + allowance);
         checked++;
@@ -275,6 +277,25 @@ t('leaderboard call carries handicaps and the allowance for the page', () => {
   assert.strictEqual(Object.keys(lb.handicaps).length, 16);
   assert.strictEqual(lb.allowance, 1);
   ctx.__sheets.Players.data.find(r => r[0] === 'Owen Evans')[1] = 0;
+});
+
+// 6. Course handicaps = the clubs' published equivalence tables (yellow, men).
+t('course handicap matches official table rows', () => {
+  const ch = (course, idx, allow) => Math.round(vm.runInContext('courseHandicapExact', ctx)(course, idx) * allow);
+  const rows = [
+    // [course, index, allowance, playing handicap per the club's table]
+    ['Torrequebrada', 8.6, 1, 9], ['Torrequebrada', 8.7, 1, 10], ['Torrequebrada', 9.0, 1, 10],   // 2023 table, informal 100%
+    ['Torrequebrada', 9.0, 0.95, 9], ['Torrequebrada', 9.1, 0.95, 10],                            // same table, medal/stableford 95%
+    ['Santana', 9.8, 1, 9], ['Santana', 9.9, 1, 10], ['Santana', 30.3, 1, 33], ['Santana', 30.4, 1, 34],
+    ['Calanova', 9.1, 1, 10], ['Calanova', 9.2, 1, 11], ['Calanova', 30.0, 1, 36]
+  ];
+  rows.forEach(([c, i, a, want]) => assert.strictEqual(ch(c, i, a), want, c + ' ' + i + ' @' + a));
+});
+t('page course-handicap formula = script, every course and index', () => {
+  const pageCH = vm.runInNewContext(html.match(/function courseHandicapExact\(course, hcp\) \{[\s\S]*?\n\}/)[0] + '; courseHandicapExact');
+  for (const k of Object.keys(pageCourses))
+    for (let i = -4; i <= 54; i += 0.1)
+      assert.ok(Math.abs(pageCH(pageCourses[k], i) - vm.runInContext('courseHandicapExact', ctx)(k, i)) < 1e-9, k + ' ' + i);
 });
 
 console.log('\n' + pass + ' passed');

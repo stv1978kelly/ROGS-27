@@ -915,6 +915,7 @@ const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzkQ4du54jiu-K2w00dH
 const COURSES = {
   "Torrequebrada": {
     name: "Golf Torrequebrada",   // yellow tees, metres - club scorecard PDF, 2024
+    cr: 70.9, slope: 139,   // yellow, men - EGA/WHS table valid 07/03/2023 (club PDF)
     holes: [
       // Front 9:  [hole, yellow(m), par, si]
       [ 1, 440, 5,  8],
@@ -940,6 +941,7 @@ const COURSES = {
   },
   "Calanova": {
     name: "Calanova Golf Club",   // yellow tees, metres - club scorecard PDF
+    cr: 71.5, slope: 136,   // yellow, men - RFEG table 05/12/2015 (club slope.pdf)
     holes: [
       // Front 9:  [hole, yellow(m), par, si]
       [ 1, 487, 5,  9],
@@ -965,6 +967,7 @@ const COURSES = {
   },
   "Cabopino": {
     name: "Cabopino Golf Marbella",   // yellow tees, metres - club scorecard PDF
+    cr: 69.1, slope: 130,   // yellow, men - club's tabla-de-equivalencia page
     holes: [
       // Front 9:  [hole, yellow(m), par, si]
       [ 1, 309, 4, 11],
@@ -990,6 +993,7 @@ const COURSES = {
   },
   "La Cala Asia": {
     name: "La Cala Resort - Asia",   // yellow tees, metres - La Cala official scorecard, 2022 (web archive)
+    cr: 69.1, slope: 139,   // yellow, men - The Social Golfer (no official La Cala table found)
     holes: [
       // Front 9:  [hole, yellow(m), par, si]
       [ 1, 286, 4, 12],
@@ -1015,6 +1019,7 @@ const COURSES = {
   },
   "Santana": {
     name: "Santana Golf",   // yellow tees, metres - club scorecard page
+    cr: 70.0, slope: 132,   // yellow, men - club's handicap-scale page
     holes: [
       // Front 9:  [hole, yellow(m), par, si]
       [ 1, 285, 4, 13],
@@ -1249,11 +1254,18 @@ function shotsOnHole(ph, si) {
 function stablefordHole(par, si, ph, score) {
   return Math.max(0, 2 + par + shotsOnHole(ph, si) - score);
 }
+// World Handicap System: course handicap = index x slope/113 + (course rating - par);
+// playing handicap = that x allowance, rounded once at the end (as Code.gs does).
+function courseHandicapExact(course, hcp) {
+  return hcp * course.slope / 113 + (course.cr - course.holes.reduce((a, h) => a + h[2], 0));
+}
 function playingHandicap(player) {
-  if (!hcpData || !(player in hcpData.handicaps)) return null;
+  if (!hcpData || !(player in hcpData.handicaps) || !currentCourse) return null;
   const a = Number(hcpData.allowance);
   const allow = isNaN(a) || a <= 0 ? 1 : (a > 1.5 ? a / 100 : a);
-  return { hcp: hcpData.handicaps[player], ph: Math.round(hcpData.handicaps[player] * allow) };
+  const hcp = hcpData.handicaps[player];
+  const exact = courseHandicapExact(currentCourse, hcp);
+  return { hcp: hcp, course: Math.round(exact), ph: Math.round(exact * allow) };
 }
 
 function recalcPoints() {
@@ -1267,7 +1279,7 @@ function recalcPoints() {
   const h = player ? playingHandicap(player) : null;
   if (!player) line.textContent = 'Pick a player to see Stableford points';
   else if (!h) line.textContent = player + ' - handicap not loaded yet (needs signal)';
-  else line.textContent = player + ' \u00b7 HCP ' + h.hcp + ' \u00b7 Playing ' + h.ph;
+  else line.textContent = player + ' \u00b7 HCP ' + h.hcp + ' \u00b7 Course ' + h.course + ' \u00b7 Playing ' + h.ph;
 
   let f = 0, b = 0, any = false;
   currentCourse.holes.forEach(([hole, , par, si]) => {

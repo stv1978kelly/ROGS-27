@@ -20,26 +20,31 @@
 //   GET   ?action=leaderboard -> {ok:true, days:[...], notifications:[...],
 //                                 handicaps:{player: hcp}, allowance}
 
-// ── Course data: par and stroke index per hole (holes 1-18) ──
+// ── Course data: yellow-tee course rating / slope, par and stroke index (holes 1-18) ──
 // Keep in step with COURSES in index.html.
 const COURSES = {
   "Torrequebrada": {
+    cr: 70.9, slope: 139,   // yellow, men - EGA/WHS table valid 07/03/2023 (club PDF)
     par: [5,4,3,4,4,5,4,4,3, 4,3,5,3,5,4,4,4,4],
     si:  [8,6,18,10,14,4,12,2,16, 3,15,5,17,7,11,1,9,13]
   },
   "Calanova": {
+    cr: 71.5, slope: 136,   // yellow, men - RFEG table 05/12/2015 (club slope.pdf)
     par: [5,4,4,4,4,3,4,3,5, 5,4,4,3,5,4,4,3,4],
     si:  [9,5,13,11,1,7,15,17,3, 6,4,18,12,2,8,10,16,14]
   },
   "Cabopino": {
+    cr: 69.1, slope: 130,   // yellow, men - club's tabla-de-equivalencia page
     par: [4,4,4,4,4,4,3,4,4, 4,4,5,3,5,3,4,4,4],
     si:  [11,12,13,9,1,10,15,6,3, 7,2,5,18,4,17,14,16,8]
   },
   "La Cala Asia": {
+    cr: 69.1, slope: 139,   // yellow, men - The Social Golfer (no official La Cala table found)
     par: [4,4,3,4,5,4,3,4,5, 5,3,4,4,4,4,5,3,4],
     si:  [12,16,18,2,10,4,14,8,6, 1,13,3,5,17,11,7,15,9]
   },
   "Santana": {
+    cr: 70.0, slope: 132,   // yellow, men - club's handicap-scale page
     par: [4,3,4,5,4,4,3,5,4, 5,4,3,4,4,5,3,4,4],
     si:  [13,9,7,3,11,17,5,1,15, 4,8,10,14,18,6,16,12,2]
   }
@@ -193,9 +198,16 @@ function shotsOnHole(ph, si) {
   return n ? -n : 0;
 }
 
+// World Handicap System: course handicap = index x slope/113 + (course rating - par);
+// playing handicap = that x allowance, rounded once at the end (as the RFEG tables do).
+function courseHandicapExact(course, handicap) {
+  const c = COURSES[course];
+  return handicap * c.slope / 113 + (c.cr - c.par.reduce((a, b) => a + b, 0));
+}
+
 function stablefordPoints(course, scores, handicap) {
   const c = COURSES[course];
-  const ph = Math.round(handicap * allowance());
+  const ph = Math.round(courseHandicapExact(course, handicap) * allowance());
   const perHole = scores.map((s, i) =>
     Math.max(0, 2 + c.par[i] + shotsOnHole(ph, c.si[i]) - s));
   const front = perHole.slice(0, 9).reduce((a, b) => a + b, 0);
