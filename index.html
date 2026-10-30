@@ -480,21 +480,37 @@
     margin-top: 12px;
   }
 
-  /* ── CHAMPIONS (top left) ── */
-  .champ-btn {
-    position: absolute; top: 10px; left: 12px;
-    width: 34px; height: 34px; padding: 0;
-    border-radius: 50%;
-    border: 2px solid #d4a017;
-    background: url('img/champs.jpg') 52% 35.5% / 230% no-repeat, #1a2a5c;   /* faces + shield */
-    cursor: pointer;
+  /* ── HOME PAGE: champions feature ── */
+  .champ-feature {
+    max-width: 520px; margin: 0 auto;
+    background: #1a2a5c; border: 2px solid #d4a017; border-radius: 14px;
+    overflow: hidden;
   }
-  .champ-btn .trophy {
-    position: absolute; bottom: -5px; right: -5px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: #d4a017; color: #1a2a5c;
-    font-size: 8px; line-height: 14px; text-align: center;
+  .champ-feature h2 {
+    font-family: 'Playfair Display', serif; color: #d4a017;
+    text-align: center; letter-spacing: 2px; text-transform: uppercase;
+    font-size: 1.1em; padding: 12px 12px 10px;
   }
+  .champ-photo {
+    display: block; width: 100%; padding: 0; border: none; cursor: zoom-in;
+    height: min(29vh, 230px);
+    background: url('img/champs.jpg') center 36% / cover no-repeat, #0d1830;   /* the two of them + shield */
+  }
+  .champ-hint { text-align: center; font-size: 0.65em; color: #a0b0d4; padding-top: 6px; }
+
+  /* ── HOME PAGE: sponsors ── */
+  .sponsors { max-width: 520px; margin: 18px auto 0; }
+  .sponsor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .sponsor {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 16px 10px 12px;
+    background: #fff; border: 2px solid #e0e4ee; border-radius: 12px;
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .sponsor:hover { border-color: #d4a017; transform: translateY(-1px); }
+  .sponsor img { display: block; max-width: 100%; height: 44px; object-fit: contain; }
+  .sponsor span { font-size: 0.75em; font-weight: 700; color: #1a2a5c; letter-spacing: 0.5px; }
   .champ-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 1100;
@@ -593,7 +609,6 @@
     .header-icons { top: 8px; right: 8px; gap: 6px; }
     .icon-btn { width: 32px; height: 32px; }
     .notif-panel { top: 46px; right: 8px; }
-    .champ-btn { top: 8px; left: 8px; width: 32px; height: 32px; }
     .leaderboard { font-size: 0.8em; }
     .leaderboard.overall td, .leaderboard.overall th { padding-left: 2px; padding-right: 2px; }
   }
@@ -610,9 +625,8 @@
   <div class="header">
     <h1><span class="golf-icon">&#9971;</span> ROGS 2027 <span class="golf-icon">&#9971;</span></h1>
     <div class="subtitle">Malaga Golf Score Card</div>
-    <button class="champ-btn" id="champBtn" aria-label="ROGS champions" title="Champions"><span class="trophy">&#127942;</span></button>
     <div class="header-icons">
-      <button class="icon-btn" id="homeBtn" aria-label="Home - score card" title="Score card">
+      <button class="icon-btn" id="homeBtn" aria-label="Home" title="Home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
       </button>
       <button class="icon-btn" id="bellBtn" aria-label="Notifications" title="Notifications">
@@ -624,7 +638,8 @@
   </div>
 
   <div class="tab-bar" id="tabBar">
-    <button class="tab-btn active" data-tab="page-card">Score Card</button>
+    <button class="tab-btn active" data-tab="page-home">Home</button>
+    <button class="tab-btn" data-tab="page-card">Score Card</button>
     <button class="tab-btn" data-tab="page-day1">Day 1</button>
     <button class="tab-btn" data-tab="page-day2">Day 2</button>
     <button class="tab-btn" data-tab="page-day3">Day 3</button>
@@ -638,7 +653,35 @@
     <button class="close" id="notifBannerClose" aria-label="Close">&times;</button>
   </div>
 
-  <div class="card-body tab-page active" id="page-card">
+  <!-- HOME -->
+  <div class="card-body tab-page active" id="page-home">
+    <div class="champ-feature">
+      <h2>&#127942; ROGS Champions</h2>
+      <button class="champ-photo" id="champPhoto" aria-label="Open the champions photo full screen"></button>
+      <div class="champ-names">
+        <div class="champ-name current"><div class="role">Current champion</div><div class="who">Paddy Swan</div><div class="side">left</div></div>
+        <div class="champ-name"><div class="role">Past champion</div><div class="who">Rick Kennedy</div><div class="side">right</div></div>
+      </div>
+    </div>
+    <p class="champ-hint">Tap the photo to see it full size</p>
+
+    <!-- Sponsors: one <a class="sponsor"> per sponsor, logos in img/sponsors/ -->
+    <div class="sponsors">
+      <div class="section-label"><span>Sponsors</span></div>
+      <div class="sponsor-grid">
+        <a class="sponsor" href="https://www.fortinet.com/" target="_blank" rel="noopener">
+          <img src="img/sponsors/fortinet.svg" alt="Fortinet logo">
+          <span>Fortinet</span>
+        </a>
+        <a class="sponsor" href="https://www.barriernetworks.com/" target="_blank" rel="noopener">
+          <img src="img/sponsors/barrier-networks.webp" alt="Barrier Networks logo">
+          <span>Barrier Networks</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body tab-page" id="page-card">
     <div class="duplicate-warning" id="duplicateWarning">
       <span class="close-warning" onclick="this.parentElement.style.display='none'">&times;</span>
       <strong>Heads up!</strong> A score card for <span id="dupPlayer"></span> on <span id="dupCourse"></span> has already been submitted.
@@ -1434,7 +1477,7 @@ document.getElementById('notifBannerClose').addEventListener('click', function()
 
 // ── Champions photo ──
 const champOverlay = document.getElementById('champOverlay');
-document.getElementById('champBtn').addEventListener('click', () => champOverlay.classList.add('open'));
+document.getElementById('champPhoto').addEventListener('click', () => champOverlay.classList.add('open'));
 document.getElementById('champClose').addEventListener('click', () => champOverlay.classList.remove('open'));
 champOverlay.addEventListener('click', e => { if (e.target === champOverlay) champOverlay.classList.remove('open'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') champOverlay.classList.remove('open'); });
@@ -1451,7 +1494,7 @@ document.getElementById('tabBar').addEventListener('click', function(e) {
   loadLeaderboard();
 });
 document.getElementById('homeBtn').addEventListener('click', function() {
-  showTab('page-card');
+  showTab('page-home');
   window.scrollTo(0, 0);
 });
 
