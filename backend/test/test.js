@@ -297,6 +297,22 @@ t('page course-handicap formula = script, every course and index', () => {
     for (let i = -4; i <= 54; i += 0.1)
       assert.ok(Math.abs(pageCH(pageCourses[k], i) - vm.runInContext('courseHandicapExact', ctx)(k, i)) < 1e-9, k + ' ' + i);
 });
+t('day tabs playing handicap = script, every course, index and allowance', () => {
+  const fns = vm.createContext({ Math, Number, isNaN, COURSES: pageCourses });
+  vm.runInContext(['courseHandicapExact', 'allowanceFactor', 'dayPlayingHandicap']
+    .map(n => html.match(new RegExp('function ' + n + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0]).join('\n'), fns);
+  for (const a of [1, 100, 0.95, 95, 0, -1, '', 'x']) {
+    ctx.__sheets.Settings.data[1][1] = a;
+    const allow = vm.runInContext('allowance', ctx)();
+    assert.strictEqual(fns.allowanceFactor(a), allow, 'allowance ' + a);
+    for (const k of Object.keys(gsCourses))
+      for (let i = -40; i <= 540; i++)
+        assert.strictEqual(fns.dayPlayingHandicap(k, i / 10, fns.allowanceFactor(a)),
+          Math.round(vm.runInContext('courseHandicapExact', ctx)(k, i / 10) * allow), k + ' ' + i / 10 + ' @' + a);
+  }
+  ctx.__sheets.Settings.data[1][1] = 1;
+  assert.strictEqual(fns.dayPlayingHandicap('', 9, 1), null);
+});
 
 // 7. Tour handicap adjustments (Steve's league rules).
 t('league adjustment arithmetic', () => {

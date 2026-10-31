@@ -482,6 +482,7 @@
   .leaderboard th.lb-player { color: #fff; }
   .leaderboard .lb-pts { font-weight: 700; color: #1a2a5c; background: #fdf6e0 !important; }
   .leaderboard th.lb-pts { background: #333 !important; color: #d4a017; }
+  .leaderboard .lb-idx { display: block; font-size: 10px; font-weight: 400; color: #8a93a8; white-space: nowrap; }
   .day-note {
     font-size: 0.75em;
     color: #888;
@@ -1259,10 +1260,18 @@ function stablefordHole(par, si, ph, score) {
 function courseHandicapExact(course, hcp) {
   return hcp * course.slope / 113 + (course.cr - course.holes.reduce((a, h) => a + h[2], 0));
 }
+// Settings allowance as a fraction: accepts 95 or 0.95 (as Code.gs allowance()).
+function allowanceFactor(a) {
+  const v = Number(a);
+  return isNaN(v) || v <= 0 ? 1 : (v > 1.5 ? v / 100 : v);
+}
+// Playing handicap off an index at a course key; null if the course isn't known.
+function dayPlayingHandicap(courseKey, hcp, allow) {
+  return COURSES[courseKey] ? Math.round(courseHandicapExact(COURSES[courseKey], hcp) * allow) : null;
+}
 function playingHandicap(player) {
   if (!hcpData || !(player in hcpData.handicaps) || !currentCourse) return null;
-  const a = Number(hcpData.allowance);
-  const allow = isNaN(a) || a <= 0 ? 1 : (a > 1.5 ? a / 100 : a);
+  const allow = allowanceFactor(hcpData.allowance);
   const courseKey = document.getElementById('coursePlayed').value;
   const dayHcps = hcpData.byCourse[courseKey];
   const hcp = dayHcps && player in dayHcps ? dayHcps[player] : hcpData.handicaps[player];
@@ -1524,7 +1533,7 @@ function renderOverall(days) {
     : 'No days played yet.';
 }
 
-function renderDay(d, day) {
+function renderDay(d, day, allow) {
   const course = day && day.course ? day.course : '';
   const courseName = COURSES[course] ? COURSES[course].name : course;
   document.getElementById('dayCourse' + d).textContent = 'Course: ' + (courseName || 'TBC');
@@ -1541,12 +1550,21 @@ function renderDay(d, day) {
   tbody.innerHTML = '';
   rows.forEach(r => {
     const tr = document.createElement('tr');
-    const hcpCell = r.hcp === null || r.hcp === undefined ? '-' : fmtHcp(r.hcp, !Number.isInteger(r.hcp));
-    [dash(r.pos), r.player, hcpCell, dash(r.front), dash(r.back), dash(r.total)].forEach((v, i) => {
+    // HCP column: playing handicap at this day's course, index underneath.
+    const known = r.hcp !== null && r.hcp !== undefined;
+    const index = known ? fmtHcp(r.hcp, !Number.isInteger(r.hcp)) : '-';
+    const ph = known ? dayPlayingHandicap(course, r.hcp, allow || 1) : null;
+    [dash(r.pos), r.player, ph === null ? index : fmtHcp(ph, false), dash(r.front), dash(r.back), dash(r.total)].forEach((v, i) => {
       const td = document.createElement('td');
       if (i === 1) td.className = 'lb-player';
       if (i === 5) td.className = 'lb-pts';
       td.textContent = v;
+      if (i === 2 && ph !== null) {
+        const idx = document.createElement('span');
+        idx.className = 'lb-idx';
+        idx.textContent = 'index ' + index;
+        td.appendChild(idx);
+      }
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1565,7 +1583,7 @@ async function loadLeaderboard() {
     const res = await fetch(WEBAPP_URL + '?action=leaderboard');
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-    data.days.slice(0, 5).forEach((day, i) => renderDay(i + 1, day));
+    data.days.slice(0, 5).forEach((day, i) => renderDay(i + 1, day, allowanceFactor(data.allowance)));
     renderOverall(data.days);
     if (data.handicaps) {
       // Each scheduled course -> the handicaps going into that day (first day it's played).
