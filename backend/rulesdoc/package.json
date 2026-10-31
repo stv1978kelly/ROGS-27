@@ -1,0 +1,8 @@
+{
+  "name": "rogs-rules-doc",
+  "private": true,
+  "description": "Builds the ROGS 2027 Tour Rules Word document",
+  "dependencies": {
+    "docx": "9.5.1"
+  }
+}
