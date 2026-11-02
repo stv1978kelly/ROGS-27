@@ -403,13 +403,13 @@ t('overall: tie for 1st on countback from the last day; other ties on week Stabl
   els.playerName = { options: players.map(p => ({ value: p })) };
   const doc = {
     getElementById: el,
-    createElement: () => ({ cells: [], className: '', textContent: '', appendChild(c) { this.cells.push(c.textContent); } })
+    createElement: () => ({ cells: [], kids: [], className: '', textContent: '', appendChild(c) { this.cells.push(c.textContent); this.kids.push(c); } })
   };
-  const fn = html.match(/function renderOverall\(days\) \{[\s\S]*?\n\}/)[0];
-  const render = vm.runInNewContext(fn + '; renderOverall', { document: doc, Math, Array });
-  const day = scores => ({ course: 'x', rows: Object.entries(scores).map(([player, [pos, total]]) => ({ player, pos, total })) });
+  const fn = ['fmtHcp', 'renderOverall'].map(n => html.match(new RegExp('function ' + n + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0]).join('\n');
+  const render = vm.runInNewContext(fn + '; renderOverall', { document: doc, Math, Array, String });
+  const day = (scores, handicaps) => ({ course: 'x', handicaps, rows: Object.entries(scores).map(([player, [pos, total]]) => ({ player, pos, total })) });
   const unplayed = { course: '', rows: [] };
-  const table = () => els.overallBody.rows.map(r => [r.cells[0], r.cells[1], r.cells[7]]);
+  const table = () => els.overallBody.rows.map(r => [r.cells[0], r.cells[1], r.cells[9]]);
 
   // A and B level on 4 for 1st. A has more week Stableford (111 v 108), but the countback runs from the
   // latest day: Days 5 and 4 unplayed, Day 3 level on 34, Day 2 B 38 v A 33 -> B 1st, A 2nd.
@@ -430,6 +430,23 @@ t('overall: tie for 1st on countback from the last day; other ties on week Stabl
     unplayed, unplayed, unplayed
   ]);
   assert.deepStrictEqual(table().slice(0, 3), [[1, 'A', 2], [1, 'B', 2], [3, 'C', 6]]);
+
+  // Start = Day 1 index, Finish = Day 5 index (one decimal once adjusted, plus shown with +),
+  // and the week's Stableford under the total (none for a player with no total).
+  render([
+    day({ A: [1, 44], B: [2, 36] }, { A: 9, B: 17, E: 20 }),
+    day({ A: [1, 38], B: [2, 30] }, { A: 5, B: 16, E: 20 }),
+    unplayed, unplayed,
+    { course: 'x', rows: [], handicaps: { A: -0.4, B: 16.5, E: 20 } }
+  ]);
+  const row = p => els.overallBody.rows.find(r => r.cells[1] === p);
+  assert.deepStrictEqual(row('A').cells.slice(2, 4), ['9', '+0.4']);
+  assert.deepStrictEqual(row('B').cells.slice(2, 4), ['17', '16.5']);
+  assert.deepStrictEqual(row('A').kids[9].cells, ['82 pts']);
+  assert.deepStrictEqual(row('B').kids[9].cells, ['66 pts']);
+  render([]);
+  assert.deepStrictEqual(els.overallBody.rows[0].cells.slice(2, 4), ['-', '-']);
+  assert.deepStrictEqual(els.overallBody.rows[0].kids[9].cells, []);
 });
 
 console.log('\n' + pass + ' passed');

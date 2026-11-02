@@ -1462,7 +1462,7 @@ function buildDayPages() {
   html += '<div class="day-course"><h2>Overall</h2>';
   html += '<div class="day-course-name">Daily finishing positions added up - lowest total wins</div></div>';
   html += '<div class="section-label"><span>Overall Leaderboard</span></div>';
-  html += '<table class="leaderboard overall"><thead><tr><th>Pos</th><th class="lb-player">Player</th>';
+  html += '<table class="leaderboard overall"><thead><tr><th>Pos</th><th class="lb-player">Player</th><th>Start</th><th>Finish</th>';
   for (let d = 1; d <= 5; d++) html += '<th>D' + d + '</th>';
   html += '<th class="lb-pts">Total</th></tr></thead><tbody id="overallBody"></tbody></table>';
   html += '<p class="day-note" id="overallNote"></p>';
@@ -1497,8 +1497,11 @@ function renderOverall(days) {
       const r = played[i] ? days[i].rows.find(r => r.player === p) : null;
       return r && r.total !== null ? r.total : 0;
     });
+    // Index at the start of the tour (Day 1) and the one played off on Day 5.
+    const index = d => (days[d] && days[d].handicaps && p in days[d].handicaps ? days[d].handicaps[p] : null);
     const counted = dayPos.filter(v => v !== null);
-    return { player: p, dayPos: dayPos, dayPts: dayPts, total: counted.length ? counted.reduce((a, b) => a + b, 0) : null, stableford: stableford };
+    return { player: p, start: index(0), finish: index(4), dayPos: dayPos, dayPts: dayPts,
+             total: counted.length ? counted.reduce((a, b) => a + b, 0) : null, stableford: stableford };
   });
 
   const totals = rows.map(r => r.total).filter(v => v !== null);
@@ -1522,11 +1525,12 @@ function renderOverall(days) {
   });
 
   const dash = v => (v === null || v === undefined ? '-' : v);
+  const idx = v => (v === null ? '-' : fmtHcp(v, !Number.isInteger(v)));
   const tbody = document.getElementById('overallBody');
   tbody.innerHTML = '';
   rows.forEach(r => {
     const tr = document.createElement('tr');
-    const cells = [dash(r.pos), r.player];
+    const cells = [dash(r.pos), r.player, idx(r.start), idx(r.finish)];
     for (let i = 0; i < 5; i++) cells.push(dash(r.dayPos[i]));
     cells.push(dash(r.total));
     cells.forEach((v, i) => {
@@ -1534,6 +1538,13 @@ function renderOverall(days) {
       if (i === 1) td.className = 'lb-player';
       if (i === cells.length - 1) td.className = 'lb-pts';
       td.textContent = v;
+      // Total: the week's Stableford points underneath.
+      if (i === cells.length - 1 && r.total !== null) {
+        const pts = document.createElement('span');
+        pts.className = 'lb-idx';
+        pts.textContent = r.stableford + ' pts';
+        td.appendChild(pts);
+      }
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1541,7 +1552,7 @@ function renderOverall(days) {
 
   const n = played.filter(Boolean).length;
   document.getElementById('overallNote').textContent = n
-    ? n + ' day' + (n > 1 ? 's' : '') + ' counted. No card on a played day = ' + field + '. Level for 1st: countback on day points, Day 5 back to Day 1. Other level totals split on total Stableford points.'
+    ? 'Start = index on Day 1, Finish = index played off on Day 5; pts = Stableford points for the week. ' + n + ' day' + (n > 1 ? 's' : '') + ' counted. No card on a played day = ' + field + '. Level for 1st: countback on day points, Day 5 back to Day 1. Other level totals split on total Stableford points.'
     : 'No days played yet.';
 }
 
