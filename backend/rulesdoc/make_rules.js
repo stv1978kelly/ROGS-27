@@ -89,7 +89,7 @@ const children = [
   h2('2.3 Daily handicap adjustment (leagues)'),
   p('After each round, a player’s handicap moves according to their Stableford points for that day, at the rate for the league they were in going into the round:'),
   table(['League', 'Handicap', 'Each point over 34', 'Each point under 28'],
-    [['League 1', '10 or below', 'cut 0.3', 'add 0.3'], ['League 2', '11 – 18', 'cut 0.5', 'add 0.5'], ['League 3', '19 – 28', 'cut 0.7', 'add 0.7']],
+    [['League 1', '9.9 or below', 'cut 0.3', 'add 0.3'], ['League 2', '10 – 17.9', 'cut 0.5', 'add 0.5'], ['League 3', '18 – 28', 'cut 0.7', 'add 0.7']],
     [1600, 2026, 2700, 2700]),
   gap(),
   bullet([b('28 to 34 points: '), r('no change.')]),

@@ -232,9 +232,9 @@ function stablefordPoints(course, scores, handicap) {
 // Players tab = certified starting handicap. After each played day a player's
 // handicap moves by their Stableford points, at the rate for the league they
 // were in going into that day:
-//   League 1 (10 or below)  0.3 per point
-//   League 2 (11-18)        0.5 per point
-//   League 3 (19 and above) 0.7 per point   (over 28 counts as League 3)
+//   League 1 (9.9 or below) 0.3 per point
+//   League 2 (10-17.9)      0.5 per point
+//   League 3 (18 and above) 0.7 per point   (over 28 counts as League 3)
 // cut for each point over 34, added for each point under 28; 28-34 = no change.
 // The day's winner(s) also lose 1 shot and the day's last place(s) gain 1.
 // The whole move (league + winner/loser shot) is capped at MAX_MOVE either way.
@@ -243,8 +243,8 @@ function stablefordPoints(course, scores, handicap) {
 const MAX_MOVE = 4;
 
 function leagueRate(hcp) {
-  if (hcp <= 10) return 0.3;
-  if (hcp <= 18) return 0.5;
+  if (hcp < 10) return 0.3;
+  if (hcp < 18) return 0.5;
   return 0.7;
 }
 
