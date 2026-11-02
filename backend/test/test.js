@@ -174,16 +174,16 @@ t('a card shows on its course day only, and not once the day is cleared', () => 
   assert.strictEqual(get().days[2].rows.length, 0);
   ctx.__sheets.Schedule.data[3][1] = 'Cabopino';
 });
-t('ranking, countback tie and joint position', () => {
+t('ranking: level on points share the position, no back-9 countback', () => {
   const s1 = cabPar.slice(); s1[0] -= 1;            // 37, front-9 birdie
-  const s2 = cabPar.slice(); s2[17] -= 1;           // 37, back-9 birdie: wins countback
-  const s3 = cabPar.slice(); s3[17] -= 1;           // same as s2: tied on both
+  const s2 = cabPar.slice(); s2[17] -= 1;           // 37, back-9 birdie: no longer wins anything
+  const s3 = cabPar.slice(); s3[17] -= 1;           // same as s2
   post(card('Ally McKinlay', 'Cabopino', s1));
   post(card('Owen Evans', 'Cabopino', s2));
   post(card('Titch Walton', 'Cabopino', s3));
   const rows = get().days[2].rows;
   assert.deepStrictEqual(rows.slice(0, 4).map(r => [r.player, r.total, r.pos]),
-    [['Owen Evans', 37, 1], ['Titch Walton', 37, 1], ['Ally McKinlay', 37, 3], ['Steve Kelly', 36, 4]]);
+    [['Ally McKinlay', 37, 1], ['Owen Evans', 37, 1], ['Titch Walton', 37, 1], ['Steve Kelly', 36, 4]]);
 });
 t('resubmitting replaces the old card', () => {
   const s = cabPar.slice(); s[5] += 2;
@@ -318,12 +318,14 @@ t('day tabs playing handicap = script, every course, index and allowance', () =>
 t('league adjustment arithmetic', () => {
   const adj = vm.runInContext('adjustedHandicap', ctx);
   const cases = [
-    [9, 46, 2], [9, 32, 9], [9, 30, 9], [9, 28, 9], [9, 33, 8.5], [9, 27, 9.5],   // League 1, 0.5
-    [10, 22, 13], [2, 46, -5],                                                    // 10 is League 1; can go plus
-    [17, 40, 10.6], [12, 20, 18.4], [10.5, 36, 7.3],                              // League 2, 0.8 (10.5 is over 10)
-    [19, 20, 27], [28, 33, 27], [30, 36, 26], [30, 20, 38]                        // League 3, 1 (over 28 too)
+    [9, 46, 0, 5.4], [9, 34, 0, 9], [9, 30, 0, 9], [9, 28, 0, 9], [9, 35, 0, 8.7], [9, 27, 0, 9.3],   // League 1, 0.3; 28-34 no change
+    [10, 22, 0, 11.8], [2, 46, 0, -1.6], [9, 50, 0, 5],                           // 10 is League 1; can go plus; 4.8 capped at 4
+    [17, 40, 0, 14], [12, 20, 0, 16], [10.5, 36, 0, 9.5], [17, 44, 0, 13],        // League 2, 0.5 (10.5 is over 10); 5 capped
+    [21, 25, 0, 23.1], [28, 35, 0, 27.3], [30, 36, 0, 28.6], [19, 20, 0, 23], [30, 20, 0, 34],   // League 3, 0.7 (over 28 too); 5.6 capped
+    [17, 40, -1, 13], [17, 44, -1, 13], [9, 30, -1, 8], [9, 30, 1, 10],           // winner -1 / last +1, inside the cap of 4
+    [9, 22, 1, 11.8], [30, 20, 1, 34], [9, 50, -1, 5], [9, 30, 0, 9]
   ];
-  cases.forEach(([h, pts, want]) => assert.strictEqual(adj(h, pts), want, h + ' @ ' + pts));
+  cases.forEach(([h, pts, bonus, want]) => assert.strictEqual(adj(h, pts, bonus), want, h + ' @ ' + pts + ' bonus ' + bonus));
 });
 t('handicaps carry forward day by day; no card = no change; corrections flow through', () => {
   const c2 = makeContext();
@@ -336,16 +338,17 @@ t('handicaps carry forward day by day; no card = no change; corrections flow thr
   const get2 = () => JSON.parse(vm.runInContext('doGet', c2)({ parameter: { action: 'leaderboard' } }).body);
   const steve = (course, scores) => post2({ player: 'Steve Kelly', course, submittedBy: 'Paddy Swan', scores, pin: TEST_PIN });
 
-  // Day 1 Torrequebrada, all pars off course 10 = 46 pts -> 9 - 0.5 x 14 = 2.0
+  // Day 1 Torrequebrada, all pars off course 10 = 46 pts -> 9 - 0.3 x 12 = 5.4
+  // (the only card is both winner and last, so the two shots cancel)
   assert.strictEqual(steve('Torrequebrada', C.Torrequebrada.par).ok, true);
   let lb = get2();
-  assert.deepStrictEqual([lb.days[0].handicaps['Steve Kelly'], lb.days[0].rows[0].total, lb.days[1].handicaps['Steve Kelly']], [9, 46, 2]);
-  // Day 2 Calanova off 2.0 (course 2): pars = 38 -> 2 - 0.5 x 6 = -1.0 for Day 3
+  assert.deepStrictEqual([lb.days[0].handicaps['Steve Kelly'], lb.days[0].rows[0].total, lb.days[1].handicaps['Steve Kelly']], [9, 46, 5.4]);
+  // Day 2 Calanova off 5.4 (course 6): pars = 42 -> 5.4 - 0.3 x 8 = 3.0 for Day 3
   steve('Calanova', C.Calanova.par);
   lb = get2();
-  assert.deepStrictEqual([lb.days[1].rows.find(r => r.player === 'Steve Kelly').total, lb.days[2].handicaps['Steve Kelly']], [38, -1]);
+  assert.deepStrictEqual([lb.days[1].rows.find(r => r.player === 'Steve Kelly').total, lb.days[2].handicaps['Steve Kelly']], [42, 3]);
   // the stored card points use the day's handicap, not the starting one
-  assert.strictEqual(c2.__sheets.Cards.data[2][26], 38);
+  assert.strictEqual(c2.__sheets.Cards.data[2][26], 42);
   // Ally never played: 6 on every day
   lb.days.forEach(d => assert.strictEqual(d.handicaps['Ally McKinlay'], 6));
   // Day 1 card corrected to all bogeys (28 pts off 10 -> no change) -> Day 2 back on 9 and re-scored
@@ -353,7 +356,79 @@ t('handicaps carry forward day by day; no card = no change; corrections flow thr
   lb = get2();
   assert.deepStrictEqual([lb.days[0].rows.find(r => r.player === 'Steve Kelly').total, lb.days[1].handicaps['Steve Kelly']], [28, 9]);
   assert.strictEqual(lb.days[1].rows.find(r => r.player === 'Steve Kelly').total, 46);   // Calanova pars off course 10
-  assert.strictEqual(lb.days[2].handicaps['Steve Kelly'], 2);
+  assert.strictEqual(lb.days[2].handicaps['Steve Kelly'], 5.4);
+});
+t('winner -1, last place +1 (shared too), whole move capped at 4', () => {
+  const c2 = makeContext();
+  vm.runInContext('ensureSheets()', c2);
+  c2.__props.CARD_PIN = TEST_PIN;
+  const P = c2.__sheets.Players.data;
+  [['Steve Kelly', 9], ['Bernie Brennan', 17], ['Ally McKinlay', 6]].forEach(([p, h]) => (P.find(r => r[0] === p)[1] = h));
+  const C = vm.runInContext('COURSES', c2);
+  const post2 = (player, course, scores) => JSON.parse(vm.runInContext('doPost', c2)({ postData: { contents: JSON.stringify({ player, course, submittedBy: 'Paddy Swan', scores, pin: TEST_PIN }) } }).body);
+  const get2 = () => JSON.parse(vm.runInContext('doGet', c2)({ parameter: { action: 'leaderboard' } }).body);
+  const pts = (lb, d, p) => lb.days[d].rows.find(r => r.player === p).total;
+
+  // Day 1 Torrequebrada
+  post2('Steve Kelly', 'Torrequebrada', C.Torrequebrada.par);                     // course 10, pars = 46: winner
+  post2('Bernie Brennan', 'Torrequebrada', C.Torrequebrada.par.map(p => p + 1));  // course 20, bogeys = 38
+  post2('Ally McKinlay', 'Torrequebrada', C.Torrequebrada.par.map(p => p + 1));   // course 6, bogeys = 24: last
+  let lb = get2();
+  assert.deepStrictEqual(['Steve Kelly', 'Bernie Brennan', 'Ally McKinlay'].map(p => pts(lb, 0, p)), [46, 38, 24]);
+  const h2 = lb.days[1].handicaps;
+  assert.strictEqual(h2['Steve Kelly'], 5);       // 0.3 x 12 = 3.6, + 1 for the win = 4.6 -> capped at 4
+  assert.strictEqual(h2['Bernie Brennan'], 15);   // 0.5 x 4 = 2.0 cut, no bonus
+  assert.strictEqual(h2['Ally McKinlay'], 8.2);   // 0.3 x 4 = 1.2 add, + 1 for last = 2.2
+  assert.strictEqual(h2['Karl Atkinson'], 0);     // no card, no change
+
+  // Day 2 Calanova, all pars: Ally (course 9) 45 wins, Steve (course 6) 42, Karl and Neil (course 0) 36 share last
+  ['Ally McKinlay', 'Steve Kelly', 'Karl Atkinson', 'Neil Sanderson'].forEach(p => post2(p, 'Calanova', C.Calanova.par));
+  lb = get2();
+  assert.deepStrictEqual(['Ally McKinlay', 'Steve Kelly', 'Karl Atkinson', 'Neil Sanderson'].map(p => [pts(lb, 1, p), lb.days[1].rows.find(r => r.player === p).pos]),
+    [[45, 1], [42, 2], [36, 3], [36, 3]]);
+  const h3 = lb.days[2].handicaps;
+  assert.strictEqual(h3['Ally McKinlay'], 4.2);   // 0.3 x 11 = 3.3, + 1 = 4.3 -> capped at 4
+  assert.strictEqual(h3['Steve Kelly'], 2.6);     // 0.3 x 8 = 2.4, no bonus
+  assert.strictEqual(h3['Karl Atkinson'], 0.4);   // 0.3 x 2 = 0.6 cut, + 1 for shared last
+  assert.strictEqual(h3['Neil Sanderson'], 0.4);
+  assert.strictEqual(h3['Bernie Brennan'], 15);   // no card on Day 2
+});
+
+// 8. Overall leaderboard (page side): level for 1st = countback Day 5, 4, 3, 2, 1.
+t('overall: tie for 1st on countback from the last day; other ties on week Stableford', () => {
+  const players = ['A', 'B', 'C', 'D', 'E'];
+  const els = {};
+  const el = id => (els[id] = els[id] || { id, rows: [], textContent: '', set innerHTML(v) { this.rows = []; }, appendChild(r) { this.rows.push(r); } });
+  els.playerName = { options: players.map(p => ({ value: p })) };
+  const doc = {
+    getElementById: el,
+    createElement: () => ({ cells: [], className: '', textContent: '', appendChild(c) { this.cells.push(c.textContent); } })
+  };
+  const fn = html.match(/function renderOverall\(days\) \{[\s\S]*?\n\}/)[0];
+  const render = vm.runInNewContext(fn + '; renderOverall', { document: doc, Math, Array });
+  const day = scores => ({ course: 'x', rows: Object.entries(scores).map(([player, [pos, total]]) => ({ player, pos, total })) });
+  const unplayed = { course: '', rows: [] };
+  const table = () => els.overallBody.rows.map(r => [r.cells[0], r.cells[1], r.cells[7]]);
+
+  // A and B level on 4 for 1st. A has more week Stableford (111 v 108), but the countback runs from the
+  // latest day: Days 5 and 4 unplayed, Day 3 level on 34, Day 2 B 38 v A 33 -> B 1st, A 2nd.
+  // C and D level on 10 (not 1st): week Stableford C 88 v D 84 -> C 3rd (a countback would have picked D: Day 3 29 v 28).
+  // E has no cards: 5 (field) on each played day.
+  render([
+    day({ A: [1, 44], B: [2, 36], C: [3, 30], D: [4, 25] }),
+    day({ A: [2, 33], B: [1, 38], C: [3, 30], D: [3, 30] }),
+    day({ A: [1, 34], B: [1, 34], C: [4, 28], D: [3, 29] }),
+    unplayed, unplayed
+  ]);
+  assert.deepStrictEqual(table(), [[1, 'B', 4], [2, 'A', 4], [3, 'C', 10], [4, 'D', 10], [5, 'E', 15]]);
+
+  // Level for 1st on every day's points too: they share 1st.
+  render([
+    day({ A: [1, 36], B: [1, 36], C: [3, 30] }),
+    day({ A: [1, 38], B: [1, 38], C: [3, 25] }),
+    unplayed, unplayed, unplayed
+  ]);
+  assert.deepStrictEqual(table().slice(0, 3), [[1, 'A', 2], [1, 'B', 2], [3, 'C', 6]]);
 });
 
 console.log('\n' + pass + ' passed');

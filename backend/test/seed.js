@@ -1,6 +1,7 @@
 // Seeds the demo server (server.js) with a 3-day scenario that has known answers.
-// Expected overall: Steve 5, Ally 19, Owen 20, Bernie 34, Paddy 35,
-// Karl 36 (6th, more Stableford) and Neil 36 (7th), everyone else 48 (joint 8th).
+// Everyone starts on 0; points below are off each day's adjusted handicap.
+// Expected overall: Steve 5, Ally 20 (2nd, more Stableford) and Owen 20 (3rd), Bernie 34,
+// Paddy 35, Karl 36 (6th, more Stableford) and Neil 36 (7th), everyone else 48 (joint 8th).
 const vm = require('vm');
 const { makeContext } = require('./harness');
 const C = vm.runInContext('COURSES', makeContext());
@@ -11,17 +12,17 @@ const card = (course, birdies = [], bogeys = []) =>
 const range = n => Array.from({ length: n }, (_, i) => i);
 
 const cards = [
-  ['Ally McKinlay', 'Torrequebrada', card('Torrequebrada', [0])],                    // 37
-  ['Owen Evans',    'Torrequebrada', card('Torrequebrada', [], range(12))],          // 24
-  ['Steve Kelly',   'Torrequebrada', card('Torrequebrada', [], range(18))],          // 18
-  ['Steve Kelly',   'Calanova',      card('Calanova', [0, 1, 9, 10])],               // 40
-  ['Ally McKinlay', 'Calanova',      card('Calanova', [], [0, 1, 2, 9, 10, 11])],    // 30
-  ['Owen Evans',    'Calanova',      card('Calanova', [], [3, 4, 5, 12, 13, 14])],   // 30, same back 9 = joint 2nd
+  ['Ally McKinlay', 'Torrequebrada', card('Torrequebrada', [0])],                    // 36
+  ['Owen Evans',    'Torrequebrada', card('Torrequebrada', [], range(12))],          // 23
+  ['Steve Kelly',   'Torrequebrada', card('Torrequebrada', [], range(18))],          // 17
+  ['Steve Kelly',   'Calanova',      card('Calanova', [0, 1, 9, 10])],               // 44
+  ['Ally McKinlay', 'Calanova',      card('Calanova', [], [0, 1, 2, 9, 10, 11])],    // 28
+  ['Owen Evans',    'Calanova',      card('Calanova', [], [3, 4, 5, 12, 13, 14])],   // 31
   ['Karl Atkinson', 'Calanova',      card('Calanova', [], range(16))],               // 20
-  ['Steve Kelly',   'Cabopino',      card('Cabopino', [0, 1, 9, 10])],                // 40
-  ['Bernie Brennan','Cabopino',      card('Cabopino')],                               // 36
-  ['Paddy Swan',    'Cabopino',      card('Cabopino', [], [0, 9])],                   // 34
-  ['Neil Sanderson','Cabopino',      card('Cabopino', [], range(18))]                 // 18
+  ['Steve Kelly',   'Cabopino',      card('Cabopino', [0, 1, 9, 10])],                // 38
+  ['Bernie Brennan','Cabopino',      card('Cabopino')],                               // 34
+  ['Paddy Swan',    'Cabopino',      card('Cabopino', [], [0, 9])],                   // 32
+  ['Neil Sanderson','Cabopino',      card('Cabopino', [], range(18))]                 // 16
 ];
 
 (async () => {

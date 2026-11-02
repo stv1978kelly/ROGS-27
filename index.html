@@ -1475,8 +1475,9 @@ function buildDayPages() {
 }
 
 // ── Overall: each played day's finishing position is your points for that day.
-// No card on a played day = last place (field size). Lowest total wins; level
-// totals split on most Stableford points across the days, then share the spot.
+// No card on a played day = last place (field size). Lowest total wins. Level
+// for 1st: countback on the day's Stableford points, Day 5 first, then 4, 3, 2, 1.
+// Level anywhere else: most Stableford points across the days. Still level = share the spot.
 function renderOverall(days) {
   const players = Array.from(document.getElementById('playerName').options)
     .map(o => o.value).filter(Boolean);
@@ -1493,19 +1494,31 @@ function renderOverall(days) {
       const r = played[i] ? d.rows.find(r => r.player === p) : null;
       return s + (r && r.total !== null ? r.total : 0);
     }, 0);
+    const dayPts = [0, 1, 2, 3, 4].map(i => {
+      const r = played[i] ? days[i].rows.find(r => r.player === p) : null;
+      return r && r.total !== null ? r.total : 0;
+    });
     const counted = dayPos.filter(v => v !== null);
-    return { player: p, dayPos: dayPos, total: counted.length ? counted.reduce((a, b) => a + b, 0) : null, stableford: stableford };
+    return { player: p, dayPos: dayPos, dayPts: dayPts, total: counted.length ? counted.reduce((a, b) => a + b, 0) : null, stableford: stableford };
   });
 
+  const totals = rows.map(r => r.total).filter(v => v !== null);
+  const lead = totals.length ? Math.min.apply(null, totals) : null;
+  // Tie-break between two players on the same total: >0 means b goes ahead.
+  const split = (a, b) => {
+    if (a.total !== lead) return b.stableford - a.stableford;
+    for (let i = 4; i >= 0; i--) if (a.dayPts[i] !== b.dayPts[i]) return b.dayPts[i] - a.dayPts[i];
+    return 0;
+  };
   rows.sort((a, b) => {
     if (a.total === null || b.total === null) return (a.total === null) - (b.total === null);
-    return (a.total - b.total) || (b.stableford - a.stableford);
+    return (a.total - b.total) || split(a, b);
   });
   let pos = 0;
   rows.forEach((r, i) => {
     if (r.total === null) { r.pos = null; return; }
     const prev = rows[i - 1];
-    if (!prev || prev.total !== r.total || prev.stableford !== r.stableford) pos = i + 1;
+    if (!prev || prev.total !== r.total || split(prev, r) !== 0) pos = i + 1;
     r.pos = pos;
   });
 
@@ -1529,7 +1542,7 @@ function renderOverall(days) {
 
   const n = played.filter(Boolean).length;
   document.getElementById('overallNote').textContent = n
-    ? n + ' day' + (n > 1 ? 's' : '') + ' counted. No card on a played day = ' + field + '. Level totals split on total Stableford points.'
+    ? n + ' day' + (n > 1 ? 's' : '') + ' counted. No card on a played day = ' + field + '. Level for 1st: countback on day points, Day 5 back to Day 1. Other level totals split on total Stableford points.'
     : 'No days played yet.';
 }
 
@@ -1573,7 +1586,7 @@ function renderDay(d, day, allow) {
   let note;
   if (!course) note = 'Course TBC - no scores yet.';
   else if (!rows.some(r => r.total !== null)) note = 'No cards in yet for this day.';
-  else note = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '. Ties split on back 9.';
+  else note = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '. Ties share the position.';
   document.getElementById('dayNote' + d).textContent = note;
 }
 

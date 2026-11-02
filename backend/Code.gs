@@ -232,24 +232,30 @@ function stablefordPoints(course, scores, handicap) {
 // Players tab = certified starting handicap. After each played day a player's
 // handicap moves by their Stableford points, at the rate for the league they
 // were in going into that day:
-//   League 1 (10 or below)  0.5 per point
-//   League 2 (11-18)        0.8 per point
-//   League 3 (19 and above) 1   per point   (over 28 counts as League 3)
-// cut for each point over 32, added for each point under 28; 28-32 = no change;
-// no card that day = no change. Kept to one decimal; rounded only when turned
+//   League 1 (10 or below)  0.3 per point
+//   League 2 (11-18)        0.5 per point
+//   League 3 (19 and above) 0.7 per point   (over 28 counts as League 3)
+// cut for each point over 34, added for each point under 28; 28-34 = no change.
+// The day's winner(s) also lose 1 shot and the day's last place(s) gain 1.
+// The whole move (league + winner/loser shot) is capped at MAX_MOVE either way.
+// No card that day = no change. Kept to one decimal; rounded only when turned
 // into a course handicap.
+const MAX_MOVE = 4;
+
 function leagueRate(hcp) {
-  if (hcp <= 10) return 0.5;
-  if (hcp <= 18) return 0.8;
-  return 1;
+  if (hcp <= 10) return 0.3;
+  if (hcp <= 18) return 0.5;
+  return 0.7;
 }
 
-function adjustedHandicap(hcp, points) {
+// bonus: -1 for the day's winner, +1 for the day's last place, 0 otherwise.
+function adjustedHandicap(hcp, points, bonus) {
   const rate = leagueRate(hcp);
-  let next = hcp;
-  if (points > 32) next = hcp - rate * (points - 32);
-  else if (points < 28) next = hcp + rate * (28 - points);
-  return Math.round(next * 10) / 10;
+  let move = bonus || 0;
+  if (points > 34) move -= rate * (points - 34);
+  else if (points < 28) move += rate * (28 - points);
+  move = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, move));
+  return Math.round((hcp + move) * 10) / 10;
 }
 
 // Days in schedule order, each with the handicap every player played off that
@@ -282,22 +288,31 @@ function leaderboard() {
       if (!hit) return {player: p, hcp: dayHcp[p], front: null, back: null, total: null, gross: null};
       // Recalculated live, so handicap, allowance or earlier-card changes flow through.
       const pts = stablefordPoints(course, hit.card.slice(5, 23).map(Number), dayHcp[p]);
-      hcp[p] = adjustedHandicap(dayHcp[p], pts.total);
       return {player: p, hcp: dayHcp[p], front: pts.front, back: pts.back, total: pts.total, gross: Number(hit.card[23])};
     });
 
-    // Points, then back-9 countback; players without a card go last.
+    // Points only; level players share the position. Players without a card go last.
     out.sort((a, b) => {
       if (a.total === null || b.total === null) return (a.total === null) - (b.total === null);
-      return (b.total - a.total) || (b.back - a.back);
+      return b.total - a.total;
     });
     let pos = 0;
     out.forEach((r, i) => {
       if (r.total === null) { r.pos = null; return; }
       const prev = out[i - 1];
-      if (!prev || prev.total !== r.total || prev.back !== r.back) pos = i + 1;
+      if (!prev || prev.total !== r.total) pos = i + 1;
       r.pos = pos;
     });
+
+    // Handicaps for the next day, once the day's winner(s) and last place(s) are known.
+    const played = out.filter(r => r.total !== null);
+    if (played.length) {
+      const best = played[0].total, worst = played[played.length - 1].total;
+      played.forEach(r => {
+        const bonus = (r.total === best ? -1 : 0) + (r.total === worst ? 1 : 0);
+        hcp[r.player] = adjustedHandicap(r.hcp, r.total, bonus);
+      });
+    }
     return {day: day, course: course, rows: out, handicaps: dayHcp};
   });
 }
